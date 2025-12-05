@@ -29,6 +29,8 @@ const universityEditorSchema = z.object({
   address: z.string().max(500, 'Максимум 500 символов').optional().or(z.literal('')),
   students_count: z.number().min(0).nullable().optional(),
   teachers_count: z.number().min(0).nullable().optional(),
+  founded_year: z.number().min(1800, 'Год должен быть больше 1800').max(new Date().getFullYear(), 'Год не может быть в будущем').nullable().optional(),
+  ranking_national: z.number().min(1, 'Рейтинг должен быть положительным').nullable().optional(),
   has_dormitory: z.boolean().optional(),
   has_military_department: z.boolean().optional(),
   has_grants: z.boolean().optional(),
@@ -95,6 +97,8 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
       address: university.address || '',
       students_count: university.students_count,
       teachers_count: university.teachers_count,
+      founded_year: university.founded_year,
+      ranking_national: university.ranking_national,
       has_dormitory: university.has_dormitory || false,
       has_military_department: university.has_military_department || false,
       has_grants: university.has_grants || false,
@@ -121,6 +125,8 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
           address: data.address || null,
           students_count: data.students_count,
           teachers_count: data.teachers_count,
+          founded_year: data.founded_year,
+          ranking_national: data.ranking_national,
           has_dormitory: data.has_dormitory,
           has_military_department: data.has_military_department,
           has_grants: data.has_grants,
@@ -361,7 +367,7 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
               )}
             />
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <FormField
                 control={form.control}
                 name="students_count"
@@ -390,6 +396,42 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
                         type="number"
                         value={field.value || ''}
                         onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="founded_year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Год основания</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                        placeholder="например, 1990"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="ranking_national"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Рейтинг в Казахстане</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                        placeholder="например, 5"
                       />
                     </FormControl>
                     <FormMessage />
