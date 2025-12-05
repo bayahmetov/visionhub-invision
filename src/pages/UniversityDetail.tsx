@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { 
   MapPin, Globe, Mail, Phone, Trophy, Users, BookOpen, Calendar,
-  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2
+  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2, Megaphone, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { ReviewSection } from '@/components/university/ReviewSection';
+import { AnnouncementsSection } from '@/components/university/AnnouncementsSection';
 import { useUniversityRating } from '@/hooks/useUniversityRating';
+import { useUniversityViews } from '@/hooks/useUniversityViews';
 
 type University = Tables<'universities'>;
 type Program = Tables<'programs'>;
@@ -53,6 +55,7 @@ export default function UniversityDetail() {
   });
 
   const { data: ratingData } = useUniversityRating(id || '');
+  const { viewCount } = useUniversityViews(id || '');
 
   if (isLoading) {
     return (
@@ -205,6 +208,13 @@ export default function UniversityDetail() {
                     <span className="text-muted-foreground">год основания</span>
                   </div>
                 )}
+                {viewCount !== undefined && viewCount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-semibold">{viewCount}</span>
+                    <span className="text-muted-foreground">просмотров</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -237,6 +247,10 @@ export default function UniversityDetail() {
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="about">{t('university.about')}</TabsTrigger>
             <TabsTrigger value="programs">{t('university.programs')}</TabsTrigger>
+            <TabsTrigger value="announcements">
+              <Megaphone className="h-4 w-4 mr-1" />
+              Объявления
+            </TabsTrigger>
             <TabsTrigger value="reviews">
               <Star className="h-4 w-4 mr-1" />
               Отзывы
@@ -360,6 +374,21 @@ export default function UniversityDetail() {
                 <p className="text-muted-foreground">Программы не найдены</p>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Announcements Tab */}
+          <TabsContent value="announcements">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-primary" />
+                  Объявления университета
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AnnouncementsSection universityId={university.id} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Reviews Tab */}
