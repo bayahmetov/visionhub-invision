@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -12,18 +13,27 @@ interface Message {
   content: string;
 }
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const suggestions = [
     'Лучшие IT ВУЗы в Алматы',
     'ВУЗы с грантами на медицину',
-    'Сравни КазНУ и КБТУ',
+    'Как подать на грант?',
   ];
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -34,38 +44,120 @@ export function ChatWidget() {
       content: input,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response (will be replaced with actual AI call)
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: getSimulatedResponse(input),
-      };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1000);
-  };
+    let assistantContent = '';
 
-  const getSimulatedResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('it') || lowerQuery.includes('ит')) {
-      return 'Для IT-специальностей в Алматы рекомендую:\n\n1. **КазНУ им. аль-Фараби** - рейтинг #1, 96% трудоустройство\n2. **КБТУ** - британские стандарты, партнерство с топ IT-компаниями\n3. **МУИТ** - специализированный IT-университет\n\nХотите сравнить эти ВУЗы?';
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          language,
+        }),
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 429) {
+          toast.error('Слишком много запросов. Попробуйте позже.');
+        } else if (resp.status === 402) {
+          toast.error('Требуется оплата. Добавьте кредиты.');
+        } else {
+          toast.error('Ошибка AI сервиса');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!resp.body) throw new Error('No response body');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'assistant') {
+                  return prev.map((m, i) =>
+                    i === prev.length - 1 ? { ...m, content: assistantContent } : m
+                  );
+                }
+                return [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: assistantContent }];
+              });
+            }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw) continue;
+          if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+          if (raw.startsWith(':') || raw.trim() === '') continue;
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'assistant') {
+                  return prev.map((m, i) =>
+                    i === prev.length - 1 ? { ...m, content: assistantContent } : m
+                  );
+                }
+                return [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: assistantContent }];
+              });
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast.error('Не удалось получить ответ от AI');
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (lowerQuery.includes('медицин') || lowerQuery.includes('врач')) {
-      return 'Лучшие медицинские ВУЗы Казахстана:\n\n1. **КазНМУ им. Асфендиярова** - #1 в медицине, 90+ лет истории\n2. **Назарбаев Университет** - медицинская школа мирового уровня\n\nМинимальный балл ЕНТ: 75-85 баллов. Гранты доступны!';
-    }
-    
-    if (lowerQuery.includes('сравни') || lowerQuery.includes('compare')) {
-      return 'Перейдите в раздел "Сравнение" чтобы сравнить до 4 университетов по параметрам:\n\n• Рейтинг\n• Стоимость обучения\n• Программы\n• Инфраструктура\n• Партнерства\n\nМогу помочь выбрать критерии для сравнения!';
-    }
-    
-    return 'Я помогу выбрать подходящий университет! Расскажите:\n\n• Какое направление вас интересует?\n• Предпочтительный город?\n• Важны ли гранты?\n\nИли выберите один из популярных вопросов выше.';
   };
 
   const handleSuggestion = (suggestion: string) => {
@@ -115,7 +207,7 @@ export function ChatWidget() {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               {messages.length === 0 ? (
                 <div className="space-y-4">
                   <div className="flex gap-3">
@@ -176,7 +268,7 @@ export function ChatWidget() {
                     </div>
                   ))}
                   
-                  {isLoading && (
+                  {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
                     <div className="flex gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                         <Bot className="h-4 w-4 text-primary" />
