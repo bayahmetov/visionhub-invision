@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { Plus, X, Trophy, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Plus, X, Trophy, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -8,11 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
-import { universities } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Compare() {
   const [searchParams] = useSearchParams();
@@ -21,47 +23,91 @@ export default function Compare() {
 
   const idsFromUrl = searchParams.get('ids')?.split(',').filter(Boolean) || [];
   const activeIds = idsFromUrl.length > 0 ? idsFromUrl : compareList;
-  
-  const selectedUniversities = universities.filter(u => activeIds.includes(u.id));
-  const availableUniversities = universities.filter(u => !activeIds.includes(u.id));
 
-  const formatNumber = (num: number) => new Intl.NumberFormat('ru-RU').format(num);
+  // Fetch all universities for selection
+  const { data: allUniversities = [], isLoading } = useQuery({
+    queryKey: ['universities-compare'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('universities')
+        .select('*')
+        .order('name_ru');
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  const formatCurrency = (num: number) => new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'KZT',
-    minimumFractionDigits: 0,
-  }).format(num);
+  // Fetch programs count for each university
+  const { data: programCounts = {} } = useQuery({
+    queryKey: ['programs-count-by-university'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('university_id');
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data.forEach(p => {
+        counts[p.university_id] = (counts[p.university_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  const selectedUniversities = allUniversities.filter(u => activeIds.includes(u.id));
+  const availableUniversities = allUniversities.filter(u => !activeIds.includes(u.id));
+
+  const formatNumber = (num: number | null) => {
+    if (num === null) return '—';
+    return new Intl.NumberFormat('ru-RU').format(num);
+  };
+
+  const formatCurrency = (num: number | null) => {
+    if (num === null) return '—';
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'KZT',
+      minimumFractionDigits: 0,
+    }).format(num);
+  };
+
+  type University = typeof allUniversities[0];
 
   const comparisonRows = [
     {
       category: 'Основная информация',
       rows: [
-        { label: 'Тип', getValue: (u: typeof universities[0]) => t(`filters.types.${u.type}`) },
-        { label: 'Год основания', getValue: (u: typeof universities[0]) => u.founded_year.toString() },
-        { label: 'Город', getValue: (u: typeof universities[0]) => u.city },
-        { label: 'Рейтинг КZ', getValue: (u: typeof universities[0]) => `#${u.ranking_national}`, highlight: true },
+        { label: 'Тип', getValue: (u: University) => t(`filters.types.${u.type}`) },
+        { label: 'Год основания', getValue: (u: University) => u.founded_year?.toString() || '—' },
+        { label: 'Город', getValue: (u: University) => u.city },
+        { label: 'Рейтинг КZ', getValue: (u: University) => u.ranking_national ? `#${u.ranking_national}` : '—', highlight: true },
       ],
     },
     {
       category: 'Статистика',
       rows: [
-        { label: 'Студентов', getValue: (u: typeof universities[0]) => formatNumber(u.students_count) },
-        { label: 'Преподавателей', getValue: (u: typeof universities[0]) => formatNumber(u.faculty_count) },
-        { label: 'Программ', getValue: (u: typeof universities[0]) => u.programs_count.toString() },
+        { label: 'Студентов', getValue: (u: University) => formatNumber(u.students_count) },
+        { label: 'Преподавателей', getValue: (u: University) => formatNumber(u.teachers_count) },
+        { label: 'Программ', getValue: (u: University) => (programCounts[u.id] || 0).toString() },
       ],
     },
     {
-      category: 'Стоимость',
+      category: 'Возможности',
       rows: [
-        { label: 'Мин. стоимость', getValue: (u: typeof universities[0]) => formatCurrency(u.tuition_min) },
-        { label: 'Макс. стоимость', getValue: (u: typeof universities[0]) => formatCurrency(u.tuition_max) },
-        { label: 'Гранты', getValue: (u: typeof universities[0]) => u.has_grants, isBoolean: true },
+        { label: 'Общежитие', getValue: (u: University) => u.has_dormitory, isBoolean: true },
+        { label: 'Гранты', getValue: (u: University) => u.has_grants, isBoolean: true },
+        { label: 'Военная кафедра', getValue: (u: University) => u.has_military_department, isBoolean: true },
       ],
     },
   ];
 
-  const colCount = selectedUniversities.length + 1;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/20 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -91,7 +137,10 @@ export default function Compare() {
                         <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Добавить</Button>
                       </DialogTrigger>
                       <DialogContent>
-                        <DialogHeader><DialogTitle>Добавить ВУЗ</DialogTitle></DialogHeader>
+                        <DialogHeader>
+                          <DialogTitle>Добавить ВУЗ</DialogTitle>
+                          <DialogDescription>Выберите университет для сравнения</DialogDescription>
+                        </DialogHeader>
                         <div className="max-h-[400px] overflow-y-auto space-y-2">
                           {availableUniversities.map((uni) => (
                             <button key={uni.id} onClick={() => addToCompare(uni.id)} className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-muted text-left">
