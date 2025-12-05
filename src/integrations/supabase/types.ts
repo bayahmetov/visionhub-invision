@@ -14,16 +14,351 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          university_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          university_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          university_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fields_of_study: {
+        Row: {
+          icon: string | null
+          id: string
+          name_en: string | null
+          name_kz: string | null
+          name_ru: string
+        }
+        Insert: {
+          icon?: string | null
+          id: string
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru: string
+        }
+        Update: {
+          icon?: string | null
+          id?: string
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru?: string
+        }
+        Relationships: []
+      }
+      partnerships: {
+        Row: {
+          created_at: string | null
+          description_en: string | null
+          description_kz: string | null
+          description_ru: string | null
+          id: string
+          partner_country: string
+          partner_name: string
+          partnership_type: string | null
+          university_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          id?: string
+          partner_country: string
+          partner_name: string
+          partnership_type?: string | null
+          university_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          id?: string
+          partner_country?: string
+          partner_name?: string
+          partnership_type?: string | null
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnerships_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      programs: {
+        Row: {
+          created_at: string | null
+          degree_level: Database["public"]["Enums"]["degree_level"]
+          description_en: string | null
+          description_kz: string | null
+          description_ru: string | null
+          duration_years: number
+          employment_rate: number | null
+          ent_min_score: number | null
+          field_id: string | null
+          grants_available: boolean | null
+          id: string
+          language: string[] | null
+          name_en: string | null
+          name_kz: string | null
+          name_ru: string
+          tuition_fee_kzt: number | null
+          university_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          degree_level: Database["public"]["Enums"]["degree_level"]
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          duration_years?: number
+          employment_rate?: number | null
+          ent_min_score?: number | null
+          field_id?: string | null
+          grants_available?: boolean | null
+          id?: string
+          language?: string[] | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru: string
+          tuition_fee_kzt?: number | null
+          university_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          degree_level?: Database["public"]["Enums"]["degree_level"]
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          duration_years?: number
+          employment_rate?: number | null
+          ent_min_score?: number | null
+          field_id?: string | null
+          grants_available?: boolean | null
+          id?: string
+          language?: string[] | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru?: string
+          tuition_fee_kzt?: number | null
+          university_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "fields_of_study"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programs_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universities: {
+        Row: {
+          accreditation: string | null
+          address: string | null
+          city: string
+          cover_image_url: string | null
+          created_at: string | null
+          description_en: string | null
+          description_kz: string | null
+          description_ru: string | null
+          email: string | null
+          founded_year: number | null
+          has_dormitory: boolean | null
+          has_grants: boolean | null
+          has_military_department: boolean | null
+          id: string
+          latitude: number | null
+          logo_url: string | null
+          longitude: number | null
+          mission_en: string | null
+          mission_kz: string | null
+          mission_ru: string | null
+          name_en: string | null
+          name_kz: string | null
+          name_ru: string
+          phone: string | null
+          ranking_national: number | null
+          ranking_qs: number | null
+          region: string
+          students_count: number | null
+          teachers_count: number | null
+          type: Database["public"]["Enums"]["university_type"]
+          updated_at: string | null
+          virtual_tour_url: string | null
+          website: string | null
+        }
+        Insert: {
+          accreditation?: string | null
+          address?: string | null
+          city: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          email?: string | null
+          founded_year?: number | null
+          has_dormitory?: boolean | null
+          has_grants?: boolean | null
+          has_military_department?: boolean | null
+          id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          mission_en?: string | null
+          mission_kz?: string | null
+          mission_ru?: string | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru: string
+          phone?: string | null
+          ranking_national?: number | null
+          ranking_qs?: number | null
+          region: string
+          students_count?: number | null
+          teachers_count?: number | null
+          type?: Database["public"]["Enums"]["university_type"]
+          updated_at?: string | null
+          virtual_tour_url?: string | null
+          website?: string | null
+        }
+        Update: {
+          accreditation?: string | null
+          address?: string | null
+          city?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          email?: string | null
+          founded_year?: number | null
+          has_dormitory?: boolean | null
+          has_grants?: boolean | null
+          has_military_department?: boolean | null
+          id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          mission_en?: string | null
+          mission_kz?: string | null
+          mission_ru?: string | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru?: string
+          phone?: string | null
+          ranking_national?: number | null
+          ranking_qs?: number | null
+          region?: string
+          students_count?: number | null
+          teachers_count?: number | null
+          type?: Database["public"]["Enums"]["university_type"]
+          updated_at?: string | null
+          virtual_tour_url?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
+      degree_level: "bachelor" | "master" | "doctorate"
+      university_type: "national" | "state" | "private" | "international"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +485,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+      degree_level: ["bachelor", "master", "doctorate"],
+      university_type: ["national", "state", "private", "international"],
+    },
   },
 } as const
