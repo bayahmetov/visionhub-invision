@@ -19,6 +19,7 @@ import ComparePrograms from "./pages/ComparePrograms";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,8 +43,9 @@ const App = () => (
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/compare-programs" element={<ComparePrograms />} />
                     <Route path="/about" element={<About />} />
-                    <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth" element={<Auth />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/admin" element={<Admin />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Layout>
