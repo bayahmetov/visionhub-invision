@@ -118,6 +118,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          university_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -126,6 +127,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          university_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -134,9 +136,18 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          university_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       programs: {
         Row: {
@@ -209,6 +220,44 @@ export type Database = {
           },
           {
             foreignKeyName: "programs_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          university_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          university_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          university_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_university_id_fkey"
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"
@@ -347,6 +396,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_university: {
+        Args: { _university_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -356,7 +409,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "student" | "university"
       degree_level: "bachelor" | "master" | "doctorate"
       university_type: "national" | "state" | "private" | "international"
     }
@@ -486,7 +539,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "student", "university"],
       degree_level: ["bachelor", "master", "doctorate"],
       university_type: ["national", "state", "private", "international"],
     },
