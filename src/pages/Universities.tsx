@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, Users, Scale, ExternalLink, Loader2, GraduationCap, Calendar, Award } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Users, Scale, ExternalLink, Loader2, GraduationCap, Calendar, Award, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useUniversitiesRatings } from '@/hooks/useUniversityRating';
 
 type University = Tables<'universities'>;
 
@@ -44,10 +45,20 @@ export default function Universities() {
   
   const initialField = searchParams.get('field');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>(searchParams.get('city') || '');
   const [selectedFields, setSelectedFields] = useState<string[]>(initialField ? [initialField] : []);
   const [hasGrants, setHasGrants] = useState(false);
+  const [minRating, setMinRating] = useState<string>('');
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(localSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearchQuery]);
   const [sortBy, setSortBy] = useState<string>('ranking');
 
   const { data: universities = [], isLoading } = useQuery({
@@ -111,6 +122,10 @@ export default function Universities() {
     },
   });
 
+  // Fetch ratings for all universities
+  const universityIds = useMemo(() => universities.map(u => u.id), [universities]);
+  const { data: ratingsData = {} } = useUniversitiesRatings(universityIds);
+
   const types = [
     { id: 'national', label: t('filters.types.national') },
     { id: 'state', label: t('filters.types.state') },
@@ -151,6 +166,15 @@ export default function Universities() {
       });
     }
 
+    // Filter by minimum rating
+    if (minRating) {
+      const minRatingNum = parseFloat(minRating);
+      result = result.filter(u => {
+        const rating = ratingsData[u.id];
+        return rating && rating.averageRating >= minRatingNum;
+      });
+    }
+
     switch (sortBy) {
       case 'ranking':
         result.sort((a, b) => (a.ranking_national || 999) - (b.ranking_national || 999));
@@ -164,7 +188,7 @@ export default function Universities() {
     }
 
     return result;
-  }, [universities, searchQuery, selectedTypes, selectedRegion, hasGrants, selectedFields, universityFields, sortBy]);
+  }, [universities, searchQuery, selectedTypes, selectedRegion, hasGrants, selectedFields, universityFields, sortBy, minRating, ratingsData]);
 
   const toggleType = (typeId: string) => {
     setSelectedTypes(prev => 
@@ -184,10 +208,12 @@ export default function Universities() {
 
   const clearFilters = () => {
     setSearchQuery('');
+    setLocalSearchQuery('');
     setSelectedTypes([]);
     setSelectedRegion('');
     setSelectedFields([]);
     setHasGrants(false);
+    setMinRating('');
     setSearchParams({});
   };
 
@@ -214,7 +240,7 @@ export default function Universities() {
     return num.toString();
   };
 
-  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || selectedFields.length > 0 || hasGrants;
+  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || selectedFields.length > 0 || hasGrants || minRating;
 
   const typeLabels: Record<string, string> = {
     national: t('filters.types.national'),
@@ -231,8 +257,8 @@ export default function Universities() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('hero.searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -284,6 +310,22 @@ export default function Universities() {
         </Label>
       </div>
 
+      <div>
+        <Label className="mb-2 block">Минимальный рейтинг</Label>
+        <Select value={minRating} onValueChange={setMinRating}>
+          <SelectTrigger>
+            <SelectValue placeholder="Любой рейтинг" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Любой рейтинг</SelectItem>
+            <SelectItem value="3">⭐ 3.0 и выше</SelectItem>
+            <SelectItem value="3.5">⭐ 3.5 и выше</SelectItem>
+            <SelectItem value="4">⭐ 4.0 и выше</SelectItem>
+            <SelectItem value="4.5">⭐ 4.5 и выше</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {fieldsOfStudy.length > 0 && (
         <div>
           <Label className="mb-3 block">Направления</Label>
@@ -311,6 +353,8 @@ export default function Universities() {
       )}
     </div>
   );
+
+  const getRating = (universityId: string) => ratingsData[universityId];
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -398,6 +442,15 @@ export default function Universities() {
                         <Badge className="absolute right-3 top-3 rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-medium">
                           {typeLabels[university.type]}
                         </Badge>
+
+                        {/* Rating Badge */}
+                        {getRating(university.id)?.reviewsCount > 0 && (
+                          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur-sm">
+                            <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+                            <span>{getRating(university.id)?.averageRating.toFixed(1)}</span>
+                            <span className="text-muted-foreground">({getRating(university.id)?.reviewsCount})</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Logo - positioned outside cover container */}
