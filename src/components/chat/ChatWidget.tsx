@@ -324,6 +324,21 @@ export function ChatWidget() {
     setInput(suggestion);
   };
 
+  // Listen for custom event to open chat with pre-filled question
+  useEffect(() => {
+    const handleOpenWithQuestion = (e: CustomEvent<{ question: string }>) => {
+      setIsOpen(true);
+      if (e.detail?.question) {
+        setInput(e.detail.question);
+      }
+    };
+    
+    window.addEventListener('open-chat-with-question', handleOpenWithQuestion as EventListener);
+    return () => {
+      window.removeEventListener('open-chat-with-question', handleOpenWithQuestion as EventListener);
+    };
+  }, []);
+
   const currentModeConfig = modes.find(m => m.value === mode)!;
   const ModeIcon = currentModeConfig.icon;
 
@@ -331,6 +346,7 @@ export function ChatWidget() {
     <>
       {/* Chat Button */}
       <Button
+        data-chat-trigger
         onClick={() => setIsOpen(true)}
         className={cn(
           'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg',

@@ -5,12 +5,11 @@ import { ComparePromo } from '@/components/home/ComparePromo';
 import { AIAssistantPromo } from '@/components/home/AIAssistantPromo';
 
 const Index = () => {
-  const handleOpenChat = () => {
-    // Trigger chat widget by clicking the chat button
-    const chatButton = document.querySelector('[data-chat-trigger]');
-    if (chatButton) {
-      (chatButton as HTMLButtonElement).click();
-    }
+  const handleOpenChat = (question?: string) => {
+    // Dispatch custom event to open chat with optional question
+    window.dispatchEvent(new CustomEvent('open-chat-with-question', { 
+      detail: { question } 
+    }));
   };
 
   return (
