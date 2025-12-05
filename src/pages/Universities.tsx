@@ -66,7 +66,7 @@ export default function Universities() {
     }
 
     // Region filter
-    if (selectedRegion) {
+    if (selectedRegion && selectedRegion !== 'all') {
       result = result.filter(u => u.region === selectedRegion || u.city === selectedRegion);
     }
 
@@ -126,7 +126,7 @@ export default function Universities() {
     setSearchParams({});
   };
 
-  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || selectedRegion || selectedFields.length > 0 || hasGrants;
+  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || selectedFields.length > 0 || hasGrants;
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -171,7 +171,7 @@ export default function Universities() {
             <SelectValue placeholder="Все регионы" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Все регионы</SelectItem>
+            <SelectItem value="all">Все регионы</SelectItem>
             {regions.map((region) => (
               <SelectItem key={region} value={region}>
                 {region}

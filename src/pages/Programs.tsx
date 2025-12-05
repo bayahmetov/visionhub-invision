@@ -32,11 +32,11 @@ export default function Programs() {
       );
     }
 
-    if (selectedDegree) {
+    if (selectedDegree && selectedDegree !== 'all') {
       result = result.filter(p => p.degree_level === selectedDegree);
     }
 
-    if (selectedField) {
+    if (selectedField && selectedField !== 'all') {
       result = result.filter(p => p.field_of_study === selectedField);
     }
 
@@ -87,9 +87,9 @@ export default function Programs() {
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Уровень" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Все уровни</SelectItem>
-              <SelectItem value="bachelor">{t('filters.degrees.bachelor')}</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">Все уровни</SelectItem>
+            <SelectItem value="bachelor">{t('filters.degrees.bachelor')}</SelectItem>
               <SelectItem value="master">{t('filters.degrees.master')}</SelectItem>
               <SelectItem value="doctorate">{t('filters.degrees.doctorate')}</SelectItem>
             </SelectContent>
@@ -99,9 +99,9 @@ export default function Programs() {
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Направление" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Все направления</SelectItem>
-              {fieldsOfStudy.map(field => (
+          <SelectContent>
+            <SelectItem value="all">Все направления</SelectItem>
+            {fieldsOfStudy.map(field => (
                 <SelectItem key={field.id} value={field.id}>
                   {field.icon} {t(`fields.${field.id}`)}
                 </SelectItem>
