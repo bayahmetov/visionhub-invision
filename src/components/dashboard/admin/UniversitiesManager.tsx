@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +14,7 @@ import { SearchInput } from '@/components/shared/SearchInput';
 import { Pagination } from '@/components/shared/Pagination';
 import { SortableTableHead } from '@/components/shared/SortableTableHead';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { ImageUpload } from '@/components/shared/ImageUpload';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { universitySchema, UniversityFormData } from '@/lib/validations/university';
@@ -39,6 +40,8 @@ interface University {
   email: string | null;
   phone: string | null;
   description_ru: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
   virtual_tour_url: string | null;
 }
 
@@ -59,7 +62,9 @@ const defaultValues: UniversityFormData = {
   email: '',
   phone: '',
   description_ru: '',
-  virtual_tour_url: ''
+  virtual_tour_url: '',
+  logo_url: null,
+  cover_image_url: null
 };
 
 export default function UniversitiesManager() {
@@ -109,6 +114,8 @@ export default function UniversitiesManager() {
       phone: university.phone || '',
       description_ru: university.description_ru || '',
       virtual_tour_url: university.virtual_tour_url || '',
+      logo_url: university.logo_url || null,
+      cover_image_url: university.cover_image_url || null,
     });
     setIsDialogOpen(true);
   };
@@ -129,6 +136,8 @@ export default function UniversitiesManager() {
       phone: values.phone || null,
       description_ru: values.description_ru || null,
       virtual_tour_url: values.virtual_tour_url || null,
+      logo_url: values.logo_url || null,
+      cover_image_url: values.cover_image_url || null,
     };
 
     if (editingId) {
@@ -170,6 +179,9 @@ export default function UniversitiesManager() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Редактировать ВУЗ' : 'Добавить ВУЗ'}</DialogTitle>
+              <DialogDescription>
+                {editingId ? 'Редактирование информации о ВУЗе' : 'Добавление нового ВУЗа в систему'}
+              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -423,6 +435,22 @@ export default function UniversitiesManager() {
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-2 gap-4">
+                  <ImageUpload
+                    label="Логотип"
+                    value={form.watch('logo_url') || null}
+                    onChange={(url) => form.setValue('logo_url', url)}
+                    folder="logos"
+                    aspectRatio="square"
+                  />
+                  <ImageUpload
+                    label="Обложка"
+                    value={form.watch('cover_image_url') || null}
+                    onChange={(url) => form.setValue('cover_image_url', url)}
+                    folder="covers"
+                    aspectRatio="wide"
+                  />
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Отмена
