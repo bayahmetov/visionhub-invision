@@ -1,17 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Sparkles, Target, Briefcase, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
 }
+
+type ChatMode = 'general' | 'twin' | 'alternatives' | 'career';
+
+const modes = [
+  { value: 'general', label: 'Общие вопросы', icon: MessageCircle, description: 'Ответы на вопросы о вузах' },
+  { value: 'twin', label: 'Образовательный близнец', icon: Sparkles, description: 'Персональные рекомендации' },
+  { value: 'alternatives', label: 'План Б', icon: Target, description: 'Альтернативные пути' },
+  { value: 'career', label: 'Карьерный путь', icon: Briefcase, description: 'Перспективы после вуза' },
+] as const;
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
@@ -20,20 +38,79 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<ChatMode>('general');
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const suggestions = [
-    'Лучшие IT ВУЗы в Алматы',
-    'ВУЗы с грантами на медицину',
-    'Как подать на грант?',
-  ];
+  // Fetch user profile for personalized recommendations
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile-for-chat', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('ent_score, expected_ent_score, english_level, target_degree, budget_max_kzt, interests, preferred_cities, willing_to_relocate')
+        .eq('id', user?.id)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const getSuggestions = () => {
+    switch (mode) {
+      case 'twin':
+        return [
+          'Оцени мои шансы на грант',
+          'Какие вузы мне подходят?',
+          'Что мне подтянуть?',
+        ];
+      case 'alternatives':
+        return [
+          'Если не поступлю в КазНУ',
+          'Альтернативы медицинскому',
+          'План Б для IT специальности',
+        ];
+      case 'career':
+        return [
+          'Карьера после Computer Science',
+          'Зарплаты экономистов в РК',
+          'Перспективы юристов',
+        ];
+      default:
+        return [
+          'Лучшие IT ВУЗы в Алматы',
+          'ВУЗы с грантами на медицину',
+          'Как подать на грант?',
+        ];
+    }
+  };
+
+  const getWelcomeMessage = () => {
+    const currentMode = modes.find(m => m.value === mode);
+    if (mode === 'twin' && userProfile) {
+      return `Привет! Я твой образовательный близнец 🎓 Я вижу твой профиль${userProfile.ent_score ? ` (ЕНТ: ${userProfile.ent_score})` : ''}. Спроси меня о шансах поступления, подходящих вузах или что подтянуть!`;
+    }
+    if (mode === 'alternatives') {
+      return 'Привет! Я помогу найти альтернативные пути к образованию. Назови целевой вуз или программу, и я покажу План А, Б и В!';
+    }
+    if (mode === 'career') {
+      return 'Привет! Я симулятор карьеры 💼 Спроси о перспективах любой специальности — покажу путь через 1, 3 и 5 лет после выпуска.';
+    }
+    return t('chat.welcome');
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Clear messages when mode changes
+  useEffect(() => {
+    setMessages([]);
+  }, [mode]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -61,6 +138,8 @@ export function ChatWidget() {
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           language,
+          mode,
+          userProfile: mode !== 'general' ? userProfile : null,
         }),
       });
 
@@ -164,6 +243,9 @@ export function ChatWidget() {
     setInput(suggestion);
   };
 
+  const currentModeConfig = modes.find(m => m.value === mode)!;
+  const ModeIcon = currentModeConfig.icon;
+
   return (
     <>
       {/* Chat Button */}
@@ -181,29 +263,58 @@ export function ChatWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] animate-slide-up">
-          <div className="flex h-[500px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-3rem)] animate-slide-up">
+          <div className="flex h-[550px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
-                  <Bot className="h-5 w-5 text-primary-foreground" />
+                  <ModeIcon className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-primary-foreground">
-                    {t('chat.title')}
+                    {currentModeConfig.label}
                   </h3>
-                  <p className="text-xs text-primary-foreground/70">Online</p>
+                  <p className="text-xs text-primary-foreground/70">{currentModeConfig.description}</p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary-foreground hover:bg-primary-foreground/20 gap-1"
+                    >
+                      Режим
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {modes.map((m) => (
+                      <DropdownMenuItem
+                        key={m.value}
+                        onClick={() => setMode(m.value)}
+                        className={cn('gap-2', mode === m.value && 'bg-primary/10')}
+                      >
+                        <m.icon className="h-4 w-4" />
+                        <div>
+                          <p className="font-medium">{m.label}</p>
+                          <p className="text-xs text-muted-foreground">{m.description}</p>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
+                  className="text-primary-foreground hover:bg-primary-foreground/20"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -212,15 +323,15 @@ export function ChatWidget() {
                 <div className="space-y-4">
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <Bot className="h-4 w-4 text-primary" />
+                      <ModeIcon className="h-4 w-4 text-primary" />
                     </div>
                     <div className="rounded-2xl rounded-tl-none bg-muted px-4 py-3 text-sm">
-                      {t('chat.welcome')}
+                      {getWelcomeMessage()}
                     </div>
                   </div>
                   
                   <div className="flex flex-wrap gap-2 pl-11">
-                    {suggestions.map((suggestion, idx) => (
+                    {getSuggestions().map((suggestion, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleSuggestion(suggestion)}
@@ -252,7 +363,7 @@ export function ChatWidget() {
                         {message.role === 'user' ? (
                           <User className="h-4 w-4 text-accent-foreground" />
                         ) : (
-                          <Bot className="h-4 w-4 text-primary" />
+                          <ModeIcon className="h-4 w-4 text-primary" />
                         )}
                       </div>
                       <div
@@ -271,7 +382,7 @@ export function ChatWidget() {
                   {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
                     <div className="flex gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <Bot className="h-4 w-4 text-primary" />
+                        <ModeIcon className="h-4 w-4 text-primary" />
                       </div>
                       <div className="rounded-2xl rounded-tl-none bg-muted px-4 py-3">
                         <div className="flex gap-1">

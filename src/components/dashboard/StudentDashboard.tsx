@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Star, User, LogOut, Building2, Loader2, KeyRound } from 'lucide-react';
+import { Heart, Star, User, LogOut, Building2, Loader2, KeyRound, Target, FileText, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,17 +11,10 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useState } from 'react';
 import ProfileTab from './shared/ProfileTab';
 import AccessRequestForm from './student/AccessRequestForm';
-
-interface Favorite {
-  id: string;
-  university_id: string;
-  universities: {
-    id: string;
-    name_ru: string;
-    city: string;
-    logo_url: string | null;
-  };
-}
+import { ApplicantProfile } from './student/ApplicantProfile';
+import { RoadmapTab } from './student/RoadmapTab';
+import { DocumentsTab } from './student/DocumentsTab';
+import { WishlistTab } from './student/WishlistTab';
 
 interface Review {
   id: string;
@@ -39,19 +32,6 @@ export default function StudentDashboard() {
   const [deleteReviewId, setDeleteReviewId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: favorites = [], isLoading: favoritesLoading } = useQuery({
-    queryKey: ['student-favorites', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('favorites')
-        .select('id, university_id, universities(id, name_ru, city, logo_url)')
-        .eq('user_id', user!.id);
-      if (error) throw error;
-      return data as unknown as Favorite[];
-    },
-    enabled: !!user,
-  });
-
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['student-reviews', user?.id],
     queryFn: async () => {
@@ -64,16 +44,6 @@ export default function StudentDashboard() {
       return data as unknown as Review[];
     },
     enabled: !!user,
-  });
-
-  const removeFavoriteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('favorites').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-favorites', user?.id] });
-    },
   });
 
   const deleteReviewMutation = useMutation({
@@ -98,7 +68,7 @@ export default function StudentDashboard() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold">Личный кабинет</h1>
-          <p className="text-muted-foreground">Управляйте избранным и отзывами</p>
+          <p className="text-muted-foreground">Ваш путь к поступлению</p>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
@@ -109,79 +79,52 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="favorites">
-        <TabsList className="mb-6">
-          <TabsTrigger value="favorites" className="flex items-center gap-2">
+      <Tabs defaultValue="roadmap">
+        <TabsList className="mb-6 flex-wrap h-auto gap-1">
+          <TabsTrigger value="roadmap" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="hidden sm:inline">Дорожная карта</span>
+          </TabsTrigger>
+          <TabsTrigger value="profile-edu" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Мой профиль</span>
+          </TabsTrigger>
+          <TabsTrigger value="wishlist" className="flex items-center gap-2">
             <Heart className="h-4 w-4" />
             <span className="hidden sm:inline">Избранное</span>
           </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Документы</span>
+          </TabsTrigger>
           <TabsTrigger value="reviews" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
-            <span className="hidden sm:inline">Мои отзывы</span>
+            <span className="hidden sm:inline">Отзывы</span>
           </TabsTrigger>
           <TabsTrigger value="access" className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" />
-            <span className="hidden sm:inline">Доступ к ВУЗу</span>
+            <span className="hidden sm:inline">Доступ</span>
           </TabsTrigger>
-          <TabsTrigger value="profile" className="flex items-center gap-2">
+          <TabsTrigger value="settings" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Профиль</span>
+            <span className="hidden sm:inline">Настройки</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="favorites">
-          {favoritesLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : favorites.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">У вас пока нет избранных ВУЗов</p>
-                <Button asChild className="mt-4">
-                  <Link to="/universities">Посмотреть ВУЗы</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {favorites.map((fav) => (
-                <Card key={fav.id} className="group hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        {fav.universities.logo_url ? (
-                          <img src={fav.universities.logo_url} alt="" className="h-10 w-10 rounded object-cover" />
-                        ) : (
-                          <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-primary" />
-                          </div>
-                        )}
-                        <div>
-                          <CardTitle className="text-base line-clamp-1">{fav.universities.name_ru}</CardTitle>
-                          <CardDescription>{fav.universities.city}</CardDescription>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex gap-2">
-                    <Button asChild variant="outline" size="sm" className="flex-1">
-                      <Link to={`/universities/${fav.university_id}`}>Подробнее</Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFavoriteMutation.mutate(fav.id)}
-                      disabled={removeFavoriteMutation.isPending}
-                    >
-                      <Heart className="h-4 w-4 fill-destructive text-destructive" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="roadmap">
+          <RoadmapTab />
+        </TabsContent>
+
+        <TabsContent value="profile-edu">
+          <ApplicantProfile />
+        </TabsContent>
+
+        <TabsContent value="wishlist">
+          <WishlistTab />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <DocumentsTab />
         </TabsContent>
 
         <TabsContent value="reviews">
@@ -240,7 +183,7 @@ export default function StudentDashboard() {
           <AccessRequestForm />
         </TabsContent>
 
-        <TabsContent value="profile">
+        <TabsContent value="settings">
           <ProfileTab user={user} />
         </TabsContent>
       </Tabs>

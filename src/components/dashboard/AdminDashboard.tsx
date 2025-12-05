@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, BookOpen, Users, Handshake, Star, User, KeyRound, LogOut, Tag, Heart, Loader2 } from 'lucide-react';
+import { Building2, BookOpen, Users, Handshake, Star, User, KeyRound, LogOut, Tag, Heart, Loader2, Calendar, MapPin, Newspaper } from 'lucide-react';
 import UniversitiesManager from './admin/UniversitiesManager';
 import ProgramsManager from './admin/ProgramsManager';
 import UsersManager from './admin/UsersManager';
@@ -8,6 +8,9 @@ import PartnershipsManager from './admin/PartnershipsManager';
 import ReviewsManager from './admin/ReviewsManager';
 import AccessRequestsManager from './admin/AccessRequestsManager';
 import FieldsManager from './admin/FieldsManager';
+import { EventsManager } from './admin/EventsManager';
+import { CitiesManager } from './admin/CitiesManager';
+import { ArticlesManager } from './admin/ArticlesManager';
 import ProfileTab from './shared/ProfileTab';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -117,46 +120,54 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-10 mb-8">
+        <TabsList className="flex flex-wrap h-auto gap-1 mb-8">
           <TabsTrigger value="universities" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">ВУЗы</span>
+            <span className="hidden lg:inline">ВУЗы</span>
           </TabsTrigger>
           <TabsTrigger value="programs" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
-            <span className="hidden sm:inline">Программы</span>
+            <span className="hidden lg:inline">Программы</span>
           </TabsTrigger>
           <TabsTrigger value="fields" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
-            <span className="hidden sm:inline">Направления</span>
+            <span className="hidden lg:inline">Направления</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden lg:inline">События</span>
+          </TabsTrigger>
+          <TabsTrigger value="cities" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            <span className="hidden lg:inline">Города</span>
+          </TabsTrigger>
+          <TabsTrigger value="articles" className="flex items-center gap-2">
+            <Newspaper className="h-4 w-4" />
+            <span className="hidden lg:inline">Статьи</span>
           </TabsTrigger>
           <TabsTrigger value="partnerships" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
-            <span className="hidden sm:inline">Партнерства</span>
+            <span className="hidden lg:inline">Партнерства</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Пользователи</span>
+            <span className="hidden lg:inline">Пользователи</span>
           </TabsTrigger>
           <TabsTrigger value="access-requests" className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" />
-            <span className="hidden sm:inline">Заявки</span>
+            <span className="hidden lg:inline">Заявки</span>
           </TabsTrigger>
           <TabsTrigger value="reviews" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
-            <span className="hidden sm:inline">Отзывы</span>
+            <span className="hidden lg:inline">Отзывы</span>
           </TabsTrigger>
           <TabsTrigger value="favorites" className="flex items-center gap-2">
             <Heart className="h-4 w-4" />
-            <span className="hidden sm:inline">Избранное</span>
-          </TabsTrigger>
-          <TabsTrigger value="my-reviews" className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            <span className="hidden sm:inline">Мои отзывы</span>
+            <span className="hidden lg:inline">Избранное</span>
           </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Профиль</span>
+            <span className="hidden lg:inline">Профиль</span>
           </TabsTrigger>
         </TabsList>
 
@@ -168,6 +179,15 @@ export default function AdminDashboard() {
         </TabsContent>
         <TabsContent value="fields">
           <FieldsManager />
+        </TabsContent>
+        <TabsContent value="events">
+          <EventsManager />
+        </TabsContent>
+        <TabsContent value="cities">
+          <CitiesManager />
+        </TabsContent>
+        <TabsContent value="articles">
+          <ArticlesManager />
         </TabsContent>
         <TabsContent value="partnerships">
           <PartnershipsManager />
@@ -237,60 +257,57 @@ export default function AdminDashboard() {
           )}
         </TabsContent>
 
-        <TabsContent value="my-reviews">
-          <div className="space-y-6">
-            <ReviewForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-reviews', user?.id] })} />
-
-            {reviewsLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : myReviews.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Вы еще не оставляли отзывов</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {myReviews.map((review) => (
-                  <Card key={review.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{review.universities.name_ru}</CardTitle>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < review.rating ? 'fill-accent text-accent' : 'text-muted'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <CardDescription>
-                        {new Date(review.created_at).toLocaleDateString('ru-RU')}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {review.comment && <p className="text-sm mb-4">{review.comment}</p>}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeleteReviewId(review.id)}
-                      >
-                        Удалить отзыв
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="profile">
-          <ProfileTab user={user} />
+          <div className="space-y-6">
+            <ProfileTab user={user} />
+            
+            {/* My Reviews */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Мои отзывы
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReviewForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-reviews', user?.id] })} />
+                
+                {reviewsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : myReviews.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Вы ещё не оставляли отзывов</p>
+                ) : (
+                  <div className="space-y-4 mt-6">
+                    {myReviews.map((review) => (
+                      <div key={review.id} className="flex items-start justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{review.universities.name_ru}</p>
+                          <div className="flex items-center gap-1 my-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${i < review.rating ? 'fill-accent text-accent' : 'text-muted'}`}
+                              />
+                            ))}
+                          </div>
+                          {review.comment && <p className="text-sm text-muted-foreground">{review.comment}</p>}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteReviewId(review.id)}
+                        >
+                          Удалить
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
