@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Users, BookOpen, Trophy, Heart, Scale, ExternalLink, Star } from 'lucide-react';
+import { MapPin, Users, BookOpen, Trophy, Scale, ExternalLink, Star, GraduationCap, Calendar, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
-import { University } from '@/data/mockData';
+import { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUniversityRating } from '@/hooks/useUniversityRating';
+
+type University = Tables<'universities'>;
 
 interface UniversityCardProps {
   university: University;
@@ -46,7 +48,8 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
     international: t('filters.types.international'),
   };
 
-  const formatNumber = (num: number) => {
+  const formatNumber = (num: number | null) => {
+    if (!num) return '-';
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
     return num.toString();
@@ -54,38 +57,21 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
 
   return (
     <Card className={cn(
-      'group overflow-hidden transition-all duration-300',
-      'hover:shadow-lg hover:-translate-y-1',
-      'border-border/50 bg-card',
+      'group overflow-hidden transition-all duration-300 rounded-2xl',
+      'hover:shadow-xl hover:-translate-y-1',
+      'border border-border/60 bg-card',
       className
     )}>
       {/* Cover Image */}
-      <div className="relative h-40 overflow-hidden">
+      <div className="relative h-36 overflow-hidden">
         <img
-          src={university.cover_image_url}
+          src={university.cover_image_url || '/placeholder.svg'}
           alt={getLocalizedField(university, 'name')}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
         
-        {/* Logo */}
-        <div className="absolute bottom-0 left-4 translate-y-1/2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-md">
-            <img
-              src={university.logo_url}
-              alt=""
-              className="h-full w-full object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(university.name_en)}&background=0A9EB7&color=fff&size=64`;
-              }}
-            />
-          </div>
-        </div>
-
         {/* Type Badge */}
-        <Badge 
-          className="absolute right-3 top-3 bg-primary/90 text-primary-foreground"
-        >
+        <Badge className="absolute right-3 top-3 rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-medium">
           {typeLabels[university.type]}
         </Badge>
 
@@ -99,63 +85,65 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
         )}
       </div>
 
-      <CardContent className="pt-10 pb-4">
-        {/* Title */}
-        <h3 className="mb-2 font-display text-lg font-semibold leading-tight line-clamp-2">
+      {/* Logo - positioned outside cover container */}
+      <div className="relative">
+        <div className="absolute -top-8 left-4 z-10">
+          <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-lg">
+            <img
+              src={university.logo_url || ''}
+              alt=""
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(university.name_en || university.name_ru)}&background=0A9EB7&color=fff&size=64`;
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 pt-10 pb-4">
+        <h3 className="mb-2 font-display text-lg font-bold leading-tight line-clamp-2 min-h-[3.5rem]">
           {getLocalizedField(university, 'name')}
         </h3>
 
         {/* Location & Ranking */}
-        <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="mb-4 flex items-center gap-3 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
+            <MapPin className="h-4 w-4 text-muted-foreground" />
             {university.city}
           </span>
           {university.ranking_national && (
-            <span className="flex items-center gap-1">
-              <Trophy className="h-3.5 w-3.5 text-accent" />
-              #{university.ranking_national} {t('university.nationalRanking')}
+            <span className="flex items-center gap-1 text-accent font-medium">
+              <Award className="h-4 w-4" />
+              #{university.ranking_national} В Казахстане
             </span>
           )}
         </div>
 
-        {/* Stats */}
-        <div className="mb-4 grid grid-cols-3 gap-2 rounded-lg bg-muted/50 p-2 text-center">
-          <div>
-            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
-              <Users className="h-3.5 w-3.5 text-primary" />
+        {/* Stats Row */}
+        <div className="mb-4 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-background">
+          <div className="py-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+              <Users className="h-4 w-4 text-muted-foreground" />
               {formatNumber(university.students_count)}
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.students')}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Студентов</div>
           </div>
-          <div>
-            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
-              <BookOpen className="h-3.5 w-3.5 text-primary" />
-              {university.programs_count}
+          <div className="py-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              {university.teachers_count || '-'}
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('common.programs')}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Педагогов</div>
           </div>
-          <div>
-            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
-              <Trophy className="h-3.5 w-3.5 text-accent" />
-              {university.founded_year}
+          <div className="py-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              {university.founded_year || '-'}
             </div>
-            <div className="text-[10px] text-muted-foreground">{t('university.founded')}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Год</div>
           </div>
-        </div>
-
-        {/* Fields Tags */}
-        <div className="mb-4 flex flex-wrap gap-1">
-          {university.fields.slice(0, 3).map((field) => (
-            <Badge key={field} variant="secondary" className="text-[10px]">
-              {t(`fields.${field}`)}
-            </Badge>
-          ))}
-          {university.fields.length > 3 && (
-            <Badge variant="outline" className="text-[10px]">
-              +{university.fields.length - 3}
-            </Badge>
-          )}
         </div>
 
         {/* Actions */}
@@ -176,7 +164,7 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
             </Link>
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
