@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, BookOpen, Handshake, LogOut, AlertCircle, User } from 'lucide-react';
+import { Building2, BookOpen, Handshake, LogOut, AlertCircle, User, Megaphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import UniversityEditor from './university/UniversityEditor';
 import ProgramsEditor from './university/ProgramsEditor';
 import PartnershipsEditor from './university/PartnershipsEditor';
+import AnnouncementsEditor from './university/AnnouncementsEditor';
 import ProfileTab from './shared/ProfileTab';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -96,6 +97,10 @@ export default function UniversityDashboard() {
             <Handshake className="h-4 w-4" />
             Партнерства
           </TabsTrigger>
+          <TabsTrigger value="announcements" className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4" />
+            Объявления
+          </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Профиль
@@ -112,6 +117,10 @@ export default function UniversityDashboard() {
 
         <TabsContent value="partnerships">
           <PartnershipsEditor universityId={universityId} />
+        </TabsContent>
+
+        <TabsContent value="announcements">
+          <AnnouncementsEditor universityId={universityId} />
         </TabsContent>
 
         <TabsContent value="profile">
