@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import StudentDashboard from '@/components/dashboard/StudentDashboard';
 import UniversityDashboard from '@/components/dashboard/UniversityDashboard';
+import AdminDashboard from '@/components/dashboard/AdminDashboard';
 
 export default function Dashboard() {
   const { user, role, loading } = useAuth();
@@ -12,11 +13,7 @@ export default function Dashboard() {
     if (!loading && !user) {
       navigate('/auth');
     }
-    // Redirect admins to admin panel
-    if (!loading && user && role === 'admin') {
-      navigate('/admin');
-    }
-  }, [user, role, loading, navigate]);
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (
@@ -26,7 +23,12 @@ export default function Dashboard() {
     );
   }
 
-  if (!user || role === 'admin') return null;
+  if (!user) return null;
+
+  // Admin gets full dashboard with profile tab
+  if (role === 'admin') {
+    return <AdminDashboard />;
+  }
 
   if (role === 'university') {
     return <UniversityDashboard />;

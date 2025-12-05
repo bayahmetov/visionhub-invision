@@ -110,21 +110,20 @@ export function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {role === 'admin' ? (
+                  {role === 'admin' && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="cursor-pointer">
                         <User className="h-4 w-4 mr-2" />
                         Админ-панель
                       </Link>
                     </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="cursor-pointer">
-                        <User className="h-4 w-4 mr-2" />
-                        Личный кабинет
-                      </Link>
-                    </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      {role === 'admin' ? 'Профиль' : 'Личный кабинет'}
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
@@ -171,13 +170,24 @@ export function Navbar() {
               </Link>
             ))}
             {user ? (
-              <Link
-                to={role === 'admin' ? '/admin' : '/dashboard'}
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-3 rounded-md text-sm font-medium text-primary bg-primary/10"
-              >
-                {role === 'admin' ? 'Админ-панель' : 'Личный кабинет'}
-              </Link>
+              <>
+                {role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-3 rounded-md text-sm font-medium text-primary bg-primary/10"
+                  >
+                    Админ-панель
+                  </Link>
+                )}
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="block px-4 py-3 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  {role === 'admin' ? 'Профиль' : 'Личный кабинет'}
+                </Link>
+              </>
             ) : (
               <Link
                 to="/auth"
