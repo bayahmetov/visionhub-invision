@@ -24,7 +24,10 @@ export function Navbar() {
     { href: '/', label: t('nav.home') },
     { href: '/universities', label: t('nav.universities') },
     { href: '/programs', label: t('nav.programs') },
-    { href: '/about', label: t('nav.about') },
+    { href: '/map', label: 'Карта' },
+    { href: '/events', label: 'События' },
+    { href: '/cities', label: 'Города' },
+    { href: '/blog', label: 'Блог' },
   ];
 
   const isActive = (path: string) => {
