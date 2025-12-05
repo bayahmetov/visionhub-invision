@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,47 @@ export function ChatWidget() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  // Get page context for AI
+  const getPageContext = () => {
+    const path = location.pathname;
+    if (path === '/') return 'Главная страница';
+    if (path === '/universities') return 'Каталог университетов';
+    if (path.startsWith('/universities/')) return null; // Will be resolved with university name
+    if (path === '/programs') return 'Каталог программ';
+    if (path === '/compare') return 'Сравнение университетов';
+    if (path === '/compare-programs') return 'Сравнение программ';
+    if (path === '/cities') return 'Города Казахстана';
+    if (path === '/map') return 'Карта университетов';
+    if (path === '/events') return 'Календарь событий';
+    if (path === '/blog') return 'Блог';
+    if (path === '/about') return 'О платформе';
+    if (path === '/dashboard') return 'Личный кабинет';
+    if (path === '/admin') return 'Админ-панель';
+    return path;
+  };
+
+  // Fetch university name if on university detail page
+  const universityIdFromPath = location.pathname.match(/^\/universities\/([a-f0-9-]+)/)?.[1];
+  const { data: currentUniversity } = useQuery({
+    queryKey: ['chat-current-university', universityIdFromPath],
+    queryFn: async () => {
+      if (!universityIdFromPath) return null;
+      const { data, error } = await supabase
+        .from('universities')
+        .select('name_ru, name_en, city')
+        .eq('id', universityIdFromPath)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!universityIdFromPath,
+  });
+
+  const pageContext = universityIdFromPath && currentUniversity
+    ? `Страница университета: ${currentUniversity.name_ru} (${currentUniversity.city})`
+    : getPageContext();
 
   // Fetch user profile for personalized recommendations
   const { data: userProfile } = useQuery({
@@ -143,6 +185,7 @@ export function ChatWidget() {
           language,
           mode,
           userProfile: mode !== 'general' ? userProfile : null,
+          pageContext,
         }),
       });
 

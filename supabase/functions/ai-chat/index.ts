@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, language = 'ru', userProfile, mode = 'general' } = await req.json();
+    const { messages, language = 'ru', userProfile, mode = 'general', pageContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -22,7 +22,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("AI Chat - Mode:", mode, "Language:", language, "Has profile:", !!userProfile, "Messages count:", messages?.length);
+    console.log("AI Chat - Mode:", mode, "Language:", language, "Has profile:", !!userProfile, "Page:", pageContext, "Messages count:", messages?.length);
 
     // Build context from user profile
     let profileContext = '';
@@ -42,6 +42,12 @@ serve(async (req) => {
       }
     }
 
+    // Build page context
+    let pageContextInfo = '';
+    if (pageContext) {
+      pageContextInfo = `\n\nТЕКУЩАЯ СТРАНИЦА ПОЛЬЗОВАТЕЛЯ: ${pageContext}\nУчитывай это в ответах — если пользователь на странице конкретного вуза, ты можешь давать информацию о нём напрямую.`;
+    }
+
     const systemPrompts = {
       ru: {
         general: `Ты — AI-консультант DataHub, платформы для поиска университетов Казахстана. 
@@ -53,7 +59,7 @@ serve(async (req) => {
 - Информировать о стипендиях и общежитиях
 
 Отвечай кратко, дружелюбно и по делу. Используй факты о казахстанских вузах.
-Если не знаешь точного ответа — так и скажи, но постарайся направить к нужным ресурсам.${profileContext}`,
+Если не знаешь точного ответа — так и скажи, но постарайся направить к нужным ресурсам.${profileContext}${pageContextInfo}`,
 
         twin: `Ты — персональный "Образовательный близнец" (Digital Twin абитуриента) — AI-система, которая ЗНАЕТ профиль пользователя и "примеряет" на него разные образовательные сценарии.
 
