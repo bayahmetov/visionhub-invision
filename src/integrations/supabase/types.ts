@@ -55,22 +55,298 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          announcement_type: string
+          content_en: string | null
+          content_kz: string | null
+          content_ru: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_pinned: boolean | null
+          published_at: string | null
+          title_en: string | null
+          title_kz: string | null
+          title_ru: string
+          university_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          announcement_type?: string
+          content_en?: string | null
+          content_kz?: string | null
+          content_ru: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          published_at?: string | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru: string
+          university_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          announcement_type?: string
+          content_en?: string | null
+          content_kz?: string | null
+          content_ru?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          published_at?: string | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru?: string
+          university_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      articles: {
+        Row: {
+          author_id: string | null
+          category: string
+          content_en: string | null
+          content_kz: string | null
+          content_ru: string
+          cover_image_url: string | null
+          created_at: string | null
+          excerpt_en: string | null
+          excerpt_kz: string | null
+          excerpt_ru: string | null
+          id: string
+          is_published: boolean | null
+          published_at: string | null
+          slug: string
+          tags: string[] | null
+          title_en: string | null
+          title_kz: string | null
+          title_ru: string
+          updated_at: string | null
+          views_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          category?: string
+          content_en?: string | null
+          content_kz?: string | null
+          content_ru: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          excerpt_en?: string | null
+          excerpt_kz?: string | null
+          excerpt_ru?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          slug: string
+          tags?: string[] | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru: string
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          category?: string
+          content_en?: string | null
+          content_kz?: string | null
+          content_ru?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          excerpt_en?: string | null
+          excerpt_kz?: string | null
+          excerpt_ru?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          slug?: string
+          tags?: string[] | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru?: string
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cities: {
+        Row: {
+          cost_of_living_kzt: number | null
+          created_at: string | null
+          description_en: string | null
+          description_kz: string | null
+          description_ru: string | null
+          dormitory_cost_kzt: number | null
+          id: string
+          image_url: string | null
+          latitude: number | null
+          longitude: number | null
+          name_en: string | null
+          name_kz: string | null
+          name_ru: string
+          population: number | null
+          region: string
+          rent_cost_kzt: number | null
+          safety_rating: number | null
+          transport_info_en: string | null
+          transport_info_kz: string | null
+          transport_info_ru: string | null
+        }
+        Insert: {
+          cost_of_living_kzt?: number | null
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          dormitory_cost_kzt?: number | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru: string
+          population?: number | null
+          region: string
+          rent_cost_kzt?: number | null
+          safety_rating?: number | null
+          transport_info_en?: string | null
+          transport_info_kz?: string | null
+          transport_info_ru?: string | null
+        }
+        Update: {
+          cost_of_living_kzt?: number | null
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          dormitory_cost_kzt?: number | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name_en?: string | null
+          name_kz?: string | null
+          name_ru?: string
+          population?: number | null
+          region?: string
+          rent_cost_kzt?: number | null
+          safety_rating?: number | null
+          transport_info_en?: string | null
+          transport_info_kz?: string | null
+          transport_info_ru?: string | null
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string | null
+          description_en: string | null
+          description_kz: string | null
+          description_ru: string | null
+          end_date: string | null
+          event_date: string
+          event_type: string
+          id: string
+          is_online: boolean | null
+          link: string | null
+          location: string | null
+          title_en: string | null
+          title_kz: string | null
+          title_ru: string
+          university_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          end_date?: string | null
+          event_date: string
+          event_type?: string
+          id?: string
+          is_online?: boolean | null
+          link?: string | null
+          location?: string | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru: string
+          university_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description_en?: string | null
+          description_kz?: string | null
+          description_ru?: string | null
+          end_date?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          is_online?: boolean | null
+          link?: string | null
+          location?: string | null
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru?: string
+          university_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string | null
           id: string
+          notes: string | null
+          priority: number | null
           university_id: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          notes?: string | null
+          priority?: number | null
           university_id: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          notes?: string | null
+          priority?: number | null
           university_id?: string
           user_id?: string
         }
@@ -155,30 +431,57 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          budget_max_kzt: number | null
           created_at: string | null
+          english_level: string | null
+          ent_score: number | null
+          expected_ent_score: number | null
           full_name: string | null
           id: string
+          interests: string[] | null
           phone: string | null
+          preferred_cities: string[] | null
+          preferred_fields: string[] | null
+          target_degree: string | null
           university_id: string | null
           updated_at: string | null
+          willing_to_relocate: boolean | null
         }
         Insert: {
           avatar_url?: string | null
+          budget_max_kzt?: number | null
           created_at?: string | null
+          english_level?: string | null
+          ent_score?: number | null
+          expected_ent_score?: number | null
           full_name?: string | null
           id: string
+          interests?: string[] | null
           phone?: string | null
+          preferred_cities?: string[] | null
+          preferred_fields?: string[] | null
+          target_degree?: string | null
           university_id?: string | null
           updated_at?: string | null
+          willing_to_relocate?: boolean | null
         }
         Update: {
           avatar_url?: string | null
+          budget_max_kzt?: number | null
           created_at?: string | null
+          english_level?: string | null
+          ent_score?: number | null
+          expected_ent_score?: number | null
           full_name?: string | null
           id?: string
+          interests?: string[] | null
           phone?: string | null
+          preferred_cities?: string[] | null
+          preferred_fields?: string[] | null
+          target_degree?: string | null
           university_id?: string | null
           updated_at?: string | null
+          willing_to_relocate?: boolean | null
         }
         Relationships: [
           {
@@ -446,6 +749,129 @@ export type Database = {
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_views: {
+        Row: {
+          id: string
+          source_city: string | null
+          source_country: string | null
+          university_id: string
+          viewed_at: string | null
+          viewer_id: string | null
+        }
+        Insert: {
+          id?: string
+          source_city?: string | null
+          source_country?: string | null
+          university_id: string
+          viewed_at?: string | null
+          viewer_id?: string | null
+        }
+        Update: {
+          id?: string
+          source_city?: string | null
+          source_country?: string | null
+          university_id?: string
+          viewed_at?: string | null
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_views_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_documents: {
+        Row: {
+          document_type: string
+          file_url: string
+          id: string
+          title: string
+          uploaded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          document_type: string
+          file_url: string
+          id?: string
+          title: string
+          uploaded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          document_type?: string
+          file_url?: string
+          id?: string
+          title?: string
+          uploaded_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roadmap_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          description_ru: string | null
+          due_date: string | null
+          id: string
+          is_completed: boolean | null
+          sort_order: number | null
+          task_key: string
+          title_en: string | null
+          title_kz: string | null
+          title_ru: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          description_ru?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          sort_order?: number | null
+          task_key: string
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          description_ru?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          sort_order?: number | null
+          task_key?: string
+          title_en?: string | null
+          title_kz?: string | null
+          title_ru?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roadmap_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

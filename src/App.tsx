@@ -20,6 +20,10 @@ import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import Map from "./pages/Map";
+import Events from "./pages/Events";
+import Cities from "./pages/Cities";
+import Blog from "./pages/Blog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,8 +46,12 @@ const App = () => (
                     <Route path="/programs" element={<Programs />} />
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/compare-programs" element={<ComparePrograms />} />
+                    <Route path="/map" element={<Map />} />
+                    <Route path="/events" element={<Events />} />
+                    <Route path="/cities" element={<Cities />} />
+                    <Route path="/blog" element={<Blog />} />
                     <Route path="/about" element={<About />} />
-                  <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth" element={<Auth />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="*" element={<NotFound />} />
