@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Star, Send, Loader2, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,9 +20,7 @@ interface Review {
   comment: string | null;
   created_at: string;
   user_id: string;
-  profiles: {
-    full_name: string | null;
-  } | null;
+  author_name?: string;
 }
 
 export function ReviewSection({ universityId, universityName }: ReviewSectionProps) {
@@ -32,18 +30,45 @@ export function ReviewSection({ universityId, universityName }: ReviewSectionPro
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  const { data: reviews = [], isLoading } = useQuery({
+  // Fetch reviews
+  const { data: rawReviews = [], isLoading } = useQuery({
     queryKey: ['university-reviews', universityId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, rating, comment, created_at, user_id, profiles(full_name)')
+        .select('id, rating, comment, created_at, user_id')
         .eq('university_id', universityId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as unknown as Review[];
+      return data;
     },
   });
+
+  // Fetch profile names for review authors
+  const userIds = useMemo(() => rawReviews.map(r => r.user_id), [rawReviews]);
+  
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['review-profiles', userIds],
+    queryFn: async () => {
+      if (userIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: userIds.length > 0,
+  });
+
+  // Combine reviews with author names
+  const reviews: Review[] = useMemo(() => {
+    const profileMap = new Map(profiles.map(p => [p.id, p.full_name]));
+    return rawReviews.map(r => ({
+      ...r,
+      author_name: profileMap.get(r.user_id) || 'Студент',
+    }));
+  }, [rawReviews, profiles]);
 
   const { data: userReview } = useQuery({
     queryKey: ['user-review', universityId, user?.id],
@@ -54,8 +79,8 @@ export function ReviewSection({ universityId, universityName }: ReviewSectionPro
         .select('*')
         .eq('university_id', universityId)
         .eq('user_id', user.id)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!user,
@@ -237,7 +262,7 @@ export function ReviewSection({ universityId, universityName }: ReviewSectionPro
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">
-                        {review.profiles?.full_name || 'Студент'}
+                        {review.author_name}
                       </span>
                       <div className="flex items-center gap-0.5">
                         {[1, 2, 3, 4, 5].map((value) => (
