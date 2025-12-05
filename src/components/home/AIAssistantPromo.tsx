@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AIAssistantPromoProps {
-  onOpenChat: () => void;
+  onOpenChat: (question?: string) => void;
 }
 
 export function AIAssistantPromo({ onOpenChat }: AIAssistantPromoProps) {
@@ -54,7 +54,7 @@ export function AIAssistantPromo({ onOpenChat }: AIAssistantPromoProps) {
           {/* CTA */}
           <Button
             size="lg"
-            onClick={onOpenChat}
+            onClick={() => onOpenChat()}
             className="gap-2 bg-primary shadow-glow hover:bg-primary/90"
           >
             <MessageSquare className="h-5 w-5" />
@@ -70,7 +70,7 @@ export function AIAssistantPromo({ onOpenChat }: AIAssistantPromoProps) {
             ].map((question, idx) => (
               <button
                 key={idx}
-                onClick={onOpenChat}
+                onClick={() => onOpenChat(question)}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 {question}
