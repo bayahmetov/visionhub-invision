@@ -14,6 +14,7 @@ import Index from "./pages/Index";
 import Universities from "./pages/Universities";
 import UniversityDetail from "./pages/UniversityDetail";
 import Programs from "./pages/Programs";
+import ProgramDetail from "./pages/ProgramDetail";
 import Compare from "./pages/Compare";
 import ComparePrograms from "./pages/ComparePrograms";
 import About from "./pages/About";
@@ -45,6 +46,7 @@ const App = () => (
                     <Route path="/universities" element={<Universities />} />
                     <Route path="/universities/:id" element={<UniversityDetail />} />
                     <Route path="/programs" element={<Programs />} />
+                    <Route path="/programs/:id" element={<ProgramDetail />} />
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/compare-programs" element={<ComparePrograms />} />
                     <Route path="/map" element={<Map />} />

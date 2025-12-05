@@ -52,6 +52,7 @@ export function ChatWidget() {
     if (path === '/universities') return 'Каталог университетов';
     if (path.startsWith('/universities/')) return null; // Will be resolved with university name
     if (path === '/programs') return 'Каталог программ';
+    if (path.startsWith('/programs/')) return null; // Will be resolved with program name
     if (path === '/compare') return 'Сравнение университетов';
     if (path === '/compare-programs') return 'Сравнение программ';
     if (path === '/cities') return 'Города Казахстана';
@@ -81,9 +82,43 @@ export function ChatWidget() {
     enabled: !!universityIdFromPath,
   });
 
-  const pageContext = universityIdFromPath && currentUniversity
-    ? `Страница университета: ${currentUniversity.name_ru} (${currentUniversity.city})`
-    : getPageContext();
+  // Fetch program info if on program detail page
+  const programIdFromPath = location.pathname.match(/^\/programs\/([a-f0-9-]+)/)?.[1];
+  const { data: currentProgram } = useQuery({
+    queryKey: ['chat-current-program', programIdFromPath],
+    queryFn: async () => {
+      if (!programIdFromPath) return null;
+      const { data, error } = await supabase
+        .from('programs')
+        .select('name_ru, name_en, degree_level, tuition_fee_kzt, ent_min_score, duration_years, universities(name_ru, city)')
+        .eq('id', programIdFromPath)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!programIdFromPath,
+  });
+
+  // Build page context
+  const getFullPageContext = () => {
+    if (universityIdFromPath && currentUniversity) {
+      return `Страница университета: ${currentUniversity.name_ru} (${currentUniversity.city})`;
+    }
+    if (programIdFromPath && currentProgram) {
+      const uni = currentProgram.universities as { name_ru: string; city: string } | null;
+      const details = [
+        currentProgram.degree_level === 'bachelor' ? 'бакалавриат' : 
+        currentProgram.degree_level === 'master' ? 'магистратура' : 'докторантура',
+        currentProgram.duration_years ? `${currentProgram.duration_years} года` : null,
+        currentProgram.tuition_fee_kzt ? `${currentProgram.tuition_fee_kzt.toLocaleString()} тг/год` : null,
+        currentProgram.ent_min_score ? `от ${currentProgram.ent_min_score} ЕНТ` : null,
+      ].filter(Boolean).join(', ');
+      return `Страница программы: ${currentProgram.name_ru}${uni ? ` в ${uni.name_ru} (${uni.city})` : ''}. Детали: ${details}`;
+    }
+    return getPageContext();
+  };
+
+  const pageContext = getFullPageContext();
 
   // Fetch user profile for personalized recommendations
   const { data: userProfile } = useQuery({
