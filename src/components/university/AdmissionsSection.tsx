@@ -5,12 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   GraduationCap, BookOpen, Award, Mail, Phone, Globe,
-  Calculator, Clock, CheckCircle, Loader2
+  Calculator, Clock, CheckCircle, Loader2, CalendarDays
 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 interface AdmissionsSectionProps {
-  university: Tables<'universities'>;
+  university: Tables<'universities'> & {
+    admission_start_date?: string | null;
+    admission_end_date?: string | null;
+  };
 }
 
 export function AdmissionsSection({ university }: AdmissionsSectionProps) {
@@ -75,6 +80,38 @@ export function AdmissionsSection({ university }: AdmissionsSectionProps) {
 
   return (
     <div className="space-y-6">
+      {/* Admission Dates */}
+      {(university.admission_start_date || university.admission_end_date) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              Сроки приёма документов
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {university.admission_start_date && (
+                <div>
+                  <span className="text-muted-foreground">Начало: </span>
+                  <span className="font-medium">
+                    {format(new Date(university.admission_start_date), 'd MMMM yyyy', { locale: ru })}
+                  </span>
+                </div>
+              )}
+              {university.admission_end_date && (
+                <div>
+                  <span className="text-muted-foreground">Окончание: </span>
+                  <span className="font-medium">
+                    {format(new Date(university.admission_end_date), 'd MMMM yyyy', { locale: ru })}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
