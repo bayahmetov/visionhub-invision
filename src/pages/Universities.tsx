@@ -44,7 +44,7 @@ export default function Universities() {
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [selectedRegion, setSelectedRegion] = useState<string>(searchParams.get('city') || '');
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [hasGrants, setHasGrants] = useState(false);
   const [sortBy, setSortBy] = useState<string>('ranking');
