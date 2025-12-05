@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -179,6 +180,7 @@ export default function ComparePrograms() {
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Добавить программу</DialogTitle>
+                      <DialogDescription>Выберите программу для сравнения</DialogDescription>
                     </DialogHeader>
                     <Input
                       placeholder="Поиск программы..."

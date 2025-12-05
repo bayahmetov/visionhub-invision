@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -290,6 +290,7 @@ export default function AnnouncementsEditor({ universityId }: AnnouncementsEdito
               <DialogTitle>
                 {editing ? 'Редактировать объявление' : 'Новое объявление'}
               </DialogTitle>
+              <DialogDescription>Заполните информацию об объявлении</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
