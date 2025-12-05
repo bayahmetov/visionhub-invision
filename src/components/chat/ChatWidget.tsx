@@ -31,7 +31,7 @@ const modes = [
   { value: 'career', label: 'Карьерный путь', icon: Briefcase, description: 'Перспективы после вуза' },
 ] as const;
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const CHAT_URL = 'https://wqrpnmhmztufgmdovyim.supabase.co/functions/v1/ai-chat';
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -133,7 +133,7 @@ export function ChatWidget() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndxcnBubWhtenR1ZmdtZG92eWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MjIzODcsImV4cCI6MjA4MDQ5ODM4N30.6q9ZdU89LJnBRSZoEMnxoS1Lan6J1IRDBHqDlat3iCc`,
         },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
