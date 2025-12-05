@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ImageUpload } from '@/components/shared/ImageUpload';
 
 const universityEditorSchema = z.object({
   description_ru: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
@@ -29,6 +30,8 @@ const universityEditorSchema = z.object({
   has_military_department: z.boolean().optional(),
   has_grants: z.boolean().optional(),
   virtual_tour_url: z.string().url('Некорректный URL').optional().or(z.literal('')),
+  logo_url: z.string().nullable().optional(),
+  cover_image_url: z.string().nullable().optional(),
 });
 
 type FormData = z.infer<typeof universityEditorSchema>;
@@ -61,6 +64,8 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
       has_military_department: university.has_military_department || false,
       has_grants: university.has_grants || false,
       virtual_tour_url: university.virtual_tour_url || '',
+      logo_url: university.logo_url || null,
+      cover_image_url: university.cover_image_url || null,
     },
   });
 
@@ -85,6 +90,8 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
           has_military_department: data.has_military_department,
           has_grants: data.has_grants,
           virtual_tour_url: data.virtual_tour_url || null,
+          logo_url: data.logo_url || null,
+          cover_image_url: data.cover_image_url || null,
         })
         .eq('id', university.id);
       if (error) throw error;
@@ -116,6 +123,23 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
                 <FormLabel>Город</FormLabel>
                 <Input value={university.city || ''} disabled className="bg-muted" />
               </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <ImageUpload
+                label="Логотип"
+                value={form.watch('logo_url') || null}
+                onChange={(url) => form.setValue('logo_url', url)}
+                folder={`university-${university.id}/logos`}
+                aspectRatio="square"
+              />
+              <ImageUpload
+                label="Обложка"
+                value={form.watch('cover_image_url') || null}
+                onChange={(url) => form.setValue('cover_image_url', url)}
+                folder={`university-${university.id}/covers`}
+                aspectRatio="wide"
+              />
             </div>
 
             <FormField

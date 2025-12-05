@@ -18,6 +18,8 @@ export const universitySchema = z.object({
   phone: z.string().max(50, 'Максимум 50 символов').optional().or(z.literal('')),
   description_ru: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
   virtual_tour_url: z.string().url('Некорректный URL').optional().or(z.literal('')),
+  logo_url: z.string().nullable().optional(),
+  cover_image_url: z.string().nullable().optional(),
 });
 
 export type UniversityFormData = z.infer<typeof universitySchema>;
