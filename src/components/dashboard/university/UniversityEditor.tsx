@@ -17,6 +17,7 @@ import { ImageUpload } from '@/components/shared/ImageUpload';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const universityEditorSchema = z.object({
+  type: z.enum(['national', 'state', 'private', 'international']),
   description_ru: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
   description_kz: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
   description_en: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
@@ -38,6 +39,13 @@ const universityEditorSchema = z.object({
   logo_url: z.string().nullable().optional(),
   cover_image_url: z.string().nullable().optional(),
 });
+
+const typeOptions = [
+  { value: 'national', label: 'Национальный' },
+  { value: 'state', label: 'Государственный' },
+  { value: 'private', label: 'Частный' },
+  { value: 'international', label: 'Международный' },
+] as const;
 
 type FormData = z.infer<typeof universityEditorSchema>;
 
@@ -85,6 +93,7 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
   const form = useForm<FormData>({
     resolver: zodResolver(universityEditorSchema),
     defaultValues: {
+      type: university.type || 'state',
       description_ru: university.description_ru || '',
       description_kz: university.description_kz || '',
       description_en: university.description_en || '',
@@ -113,6 +122,7 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
       const { error } = await supabase
         .from('universities')
         .update({
+          type: data.type,
           description_ru: data.description_ru || null,
           description_kz: data.description_kz || null,
           description_en: data.description_en || null,
@@ -194,7 +204,7 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <FormLabel>Название (RU)</FormLabel>
                 <Input value={university.name_ru || ''} disabled className="bg-muted" />
@@ -203,6 +213,30 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
                 <FormLabel>Город</FormLabel>
                 <Input value={university.city || ''} disabled className="bg-muted" />
               </div>
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Тип ВУЗа</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {typeOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
