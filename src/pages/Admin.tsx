@@ -1,20 +1,17 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import StudentDashboard from '@/components/dashboard/StudentDashboard';
-import UniversityDashboard from '@/components/dashboard/UniversityDashboard';
+import AdminDashboard from '@/components/dashboard/AdminDashboard';
 
-export default function Dashboard() {
+export default function Admin() {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
-    }
-    // Redirect admins to admin panel
-    if (!loading && user && role === 'admin') {
-      navigate('/admin');
+    } else if (!loading && role !== 'admin') {
+      navigate('/dashboard');
     }
   }, [user, role, loading, navigate]);
 
@@ -26,11 +23,7 @@ export default function Dashboard() {
     );
   }
 
-  if (!user || role === 'admin') return null;
+  if (!user || role !== 'admin') return null;
 
-  if (role === 'university') {
-    return <UniversityDashboard />;
-  }
-
-  return <StudentDashboard />;
+  return <AdminDashboard />;
 }
