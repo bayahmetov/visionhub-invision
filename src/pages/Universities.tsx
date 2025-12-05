@@ -42,10 +42,11 @@ export default function Universities() {
   const { t, getLocalizedField } = useLanguage();
   const { compareList, addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
   
+  const initialField = searchParams.get('field');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>(searchParams.get('city') || '');
-  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [selectedFields, setSelectedFields] = useState<string[]>(initialField ? [initialField] : []);
   const [hasGrants, setHasGrants] = useState(false);
   const [sortBy, setSortBy] = useState<string>('ranking');
 
