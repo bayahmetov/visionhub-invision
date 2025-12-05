@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CompareProvider } from "@/contexts/CompareContext";
+import { CompareProgramsProvider } from "@/contexts/CompareProgramsContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Layout } from "@/components/common/Layout";
@@ -14,6 +15,7 @@ import Universities from "./pages/Universities";
 import UniversityDetail from "./pages/UniversityDetail";
 import Programs from "./pages/Programs";
 import Compare from "./pages/Compare";
+import ComparePrograms from "./pages/ComparePrograms";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -26,25 +28,28 @@ const App = () => (
     <LanguageProvider>
       <AuthProvider>
         <CompareProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/universities" element={<Universities />} />
-                  <Route path="/universities/:id" element={<UniversityDetail />} />
-                  <Route path="/programs" element={<Programs />} />
-                  <Route path="/compare" element={<Compare />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Layout>
-            </BrowserRouter>
-          </TooltipProvider>
+          <CompareProgramsProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/universities" element={<Universities />} />
+                    <Route path="/universities/:id" element={<UniversityDetail />} />
+                    <Route path="/programs" element={<Programs />} />
+                    <Route path="/compare" element={<Compare />} />
+                    <Route path="/compare-programs" element={<ComparePrograms />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Layout>
+              </BrowserRouter>
+            </TooltipProvider>
+          </CompareProgramsProvider>
         </CompareProvider>
       </AuthProvider>
     </LanguageProvider>
