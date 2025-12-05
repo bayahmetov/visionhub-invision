@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { 
   MapPin, Globe, Mail, Phone, Trophy, Users, BookOpen, Calendar,
-  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2, Megaphone, Eye
+  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2, Megaphone, Eye, Handshake, ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { ReviewSection } from '@/components/university/ReviewSection';
 import { AnnouncementsSection } from '@/components/university/AnnouncementsSection';
+import { PartnershipsSection } from '@/components/university/PartnershipsSection';
+import { AdmissionsSection } from '@/components/university/AdmissionsSection';
 import { useUniversityRating } from '@/hooks/useUniversityRating';
 import { useUniversityViews } from '@/hooks/useUniversityViews';
 
@@ -247,6 +249,14 @@ export default function UniversityDetail() {
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="about">{t('university.about')}</TabsTrigger>
             <TabsTrigger value="programs">{t('university.programs')}</TabsTrigger>
+            <TabsTrigger value="admissions">
+              <ClipboardList className="h-4 w-4 mr-1" />
+              Приём
+            </TabsTrigger>
+            <TabsTrigger value="partnerships">
+              <Handshake className="h-4 w-4 mr-1" />
+              Партнерства
+            </TabsTrigger>
             <TabsTrigger value="announcements">
               <Megaphone className="h-4 w-4 mr-1" />
               Объявления
@@ -374,6 +384,26 @@ export default function UniversityDetail() {
                 <p className="text-muted-foreground">Программы не найдены</p>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Admissions Tab */}
+          <TabsContent value="admissions">
+            <AdmissionsSection university={university} />
+          </TabsContent>
+
+          {/* Partnerships Tab */}
+          <TabsContent value="partnerships">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Handshake className="h-5 w-5 text-primary" />
+                  Международное сотрудничество
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PartnershipsSection universityId={university.id} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Announcements Tab */}
