@@ -1,17 +1,27 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UniversityCard } from '@/components/universities/UniversityCard';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { universities } from '@/data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export function TopUniversities() {
   const { t } = useLanguage();
   
-  // Get top 6 universities by national ranking
-  const topUniversities = [...universities]
-    .sort((a, b) => a.ranking_national - b.ranking_national)
-    .slice(0, 6);
+  // Fetch top 6 universities by national ranking from Supabase
+  const { data: topUniversities = [], isLoading } = useQuery({
+    queryKey: ['top-universities'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('universities')
+        .select('*')
+        .order('ranking_national', { ascending: true, nullsFirst: false })
+        .limit(6);
+      if (error) throw error;
+      return data;
+    },
+  });
 
   return (
     <section className="py-16 md:py-24">
@@ -35,11 +45,17 @@ export function TopUniversities() {
         </div>
 
         {/* Universities Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {topUniversities.map((uni) => (
-            <UniversityCard key={uni.id} university={uni} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {topUniversities.map((uni) => (
+              <UniversityCard key={uni.id} university={uni} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
