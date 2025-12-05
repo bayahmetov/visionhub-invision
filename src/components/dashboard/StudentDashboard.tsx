@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Star, User, LogOut, Building2, Loader2 } from 'lucide-react';
+import { Heart, Star, User, LogOut, Building2, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,7 @@ import ReviewForm from './student/ReviewForm';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useState } from 'react';
 import ProfileTab from './shared/ProfileTab';
+import AccessRequestForm from './student/AccessRequestForm';
 
 interface Favorite {
   id: string;
@@ -117,6 +118,10 @@ export default function StudentDashboard() {
           <TabsTrigger value="reviews" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
             <span className="hidden sm:inline">Мои отзывы</span>
+          </TabsTrigger>
+          <TabsTrigger value="access" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className="hidden sm:inline">Доступ к ВУЗу</span>
           </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -229,6 +234,10 @@ export default function StudentDashboard() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="access">
+          <AccessRequestForm />
         </TabsContent>
 
         <TabsContent value="profile">
