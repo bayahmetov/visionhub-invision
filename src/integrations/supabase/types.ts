@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          admin_comment: string | null
+          created_at: string | null
+          id: string
+          message: string | null
+          status: string
+          university_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_comment?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          university_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_comment?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          university_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string | null

@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, BookOpen, Users, Handshake, Star, User } from 'lucide-react';
+import { Building2, BookOpen, Users, Handshake, Star, User, KeyRound, LogOut } from 'lucide-react';
 import UniversitiesManager from './admin/UniversitiesManager';
 import ProgramsManager from './admin/ProgramsManager';
 import UsersManager from './admin/UsersManager';
 import PartnershipsManager from './admin/PartnershipsManager';
 import ReviewsManager from './admin/ReviewsManager';
+import AccessRequestsManager from './admin/AccessRequestsManager';
 import ProfileTab from './shared/ProfileTab';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('universities');
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 mb-8">
+        <TabsList className="grid w-full grid-cols-7 mb-8">
           <TabsTrigger value="universities" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">ВУЗы</span>
@@ -48,6 +48,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Пользователи</span>
+          </TabsTrigger>
+          <TabsTrigger value="access-requests" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className="hidden sm:inline">Заявки</span>
           </TabsTrigger>
           <TabsTrigger value="reviews" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
@@ -70,6 +74,9 @@ export default function AdminDashboard() {
         </TabsContent>
         <TabsContent value="users">
           <UsersManager />
+        </TabsContent>
+        <TabsContent value="access-requests">
+          <AccessRequestsManager />
         </TabsContent>
         <TabsContent value="reviews">
           <ReviewsManager />
