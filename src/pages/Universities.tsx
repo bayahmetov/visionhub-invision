@@ -45,6 +45,7 @@ export default function Universities() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [hasGrants, setHasGrants] = useState(false);
   const [sortBy, setSortBy] = useState<string>('ranking');
 
@@ -149,6 +150,14 @@ export default function Universities() {
       result = result.filter(u => u.has_grants);
     }
 
+    // Filter by selected fields
+    if (selectedFields.length > 0) {
+      result = result.filter(u => {
+        const uniFieldIds = universityFields[u.id] || [];
+        return selectedFields.some(fieldId => uniFieldIds.includes(fieldId));
+      });
+    }
+
     switch (sortBy) {
       case 'ranking':
         result.sort((a, b) => (a.ranking_national || 999) - (b.ranking_national || 999));
@@ -162,7 +171,7 @@ export default function Universities() {
     }
 
     return result;
-  }, [universities, searchQuery, selectedTypes, selectedRegion, hasGrants, sortBy]);
+  }, [universities, searchQuery, selectedTypes, selectedRegion, hasGrants, selectedFields, universityFields, sortBy]);
 
   const toggleType = (typeId: string) => {
     setSelectedTypes(prev => 
@@ -172,10 +181,19 @@ export default function Universities() {
     );
   };
 
+  const toggleField = (fieldId: string) => {
+    setSelectedFields(prev => 
+      prev.includes(fieldId) 
+        ? prev.filter(f => f !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedTypes([]);
     setSelectedRegion('');
+    setSelectedFields([]);
     setHasGrants(false);
     setSearchParams({});
   };
@@ -203,7 +221,7 @@ export default function Universities() {
     return num.toString();
   };
 
-  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || hasGrants;
+  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || selectedFields.length > 0 || hasGrants;
 
   const typeLabels: Record<string, string> = {
     national: t('filters.types.national'),
@@ -272,6 +290,26 @@ export default function Universities() {
           {t('filters.hasGrants')}
         </Label>
       </div>
+
+      {fieldsOfStudy.length > 0 && (
+        <div>
+          <Label className="mb-3 block">Направления</Label>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {fieldsOfStudy.map((field) => (
+              <div key={field.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`field-${field.id}`}
+                  checked={selectedFields.includes(field.id)}
+                  onCheckedChange={() => toggleField(field.id)}
+                />
+                <Label htmlFor={`field-${field.id}`} className="text-sm font-normal cursor-pointer">
+                  {getLocalizedField(field, 'name')}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {hasActiveFilters && (
         <Button variant="outline" onClick={clearFilters} className="w-full">
