@@ -1,13 +1,37 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Save, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const universityEditorSchema = z.object({
+  description_ru: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
+  description_kz: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
+  description_en: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
+  mission_ru: z.string().max(2000, 'Максимум 2000 символов').optional().or(z.literal('')),
+  mission_kz: z.string().max(2000, 'Максимум 2000 символов').optional().or(z.literal('')),
+  mission_en: z.string().max(2000, 'Максимум 2000 символов').optional().or(z.literal('')),
+  website: z.string().url('Некорректный URL').optional().or(z.literal('')),
+  email: z.string().email('Некорректный email').optional().or(z.literal('')),
+  phone: z.string().max(50, 'Максимум 50 символов').optional().or(z.literal('')),
+  address: z.string().max(500, 'Максимум 500 символов').optional().or(z.literal('')),
+  students_count: z.number().min(0).nullable().optional(),
+  teachers_count: z.number().min(0).nullable().optional(),
+  has_dormitory: z.boolean().optional(),
+  has_military_department: z.boolean().optional(),
+  has_grants: z.boolean().optional(),
+  virtual_tour_url: z.string().url('Некорректный URL').optional().or(z.literal('')),
+});
+
+type FormData = z.infer<typeof universityEditorSchema>;
 
 interface UniversityEditorProps {
   university: any;
@@ -15,177 +39,283 @@ interface UniversityEditorProps {
 }
 
 export default function UniversityEditor({ university, onUpdate }: UniversityEditorProps) {
-  const [formData, setFormData] = useState(university);
-  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const handleSave = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from('universities')
-      .update({
-        description_ru: formData.description_ru,
-        description_kz: formData.description_kz,
-        description_en: formData.description_en,
-        mission_ru: formData.mission_ru,
-        mission_kz: formData.mission_kz,
-        mission_en: formData.mission_en,
-        website: formData.website,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        students_count: formData.students_count,
-        teachers_count: formData.teachers_count,
-        has_dormitory: formData.has_dormitory,
-        has_military_department: formData.has_military_department,
-        has_grants: formData.has_grants,
-        virtual_tour_url: formData.virtual_tour_url
-      })
-      .eq('id', university.id);
+  const form = useForm<FormData>({
+    resolver: zodResolver(universityEditorSchema),
+    defaultValues: {
+      description_ru: university.description_ru || '',
+      description_kz: university.description_kz || '',
+      description_en: university.description_en || '',
+      mission_ru: university.mission_ru || '',
+      mission_kz: university.mission_kz || '',
+      mission_en: university.mission_en || '',
+      website: university.website || '',
+      email: university.email || '',
+      phone: university.phone || '',
+      address: university.address || '',
+      students_count: university.students_count,
+      teachers_count: university.teachers_count,
+      has_dormitory: university.has_dormitory || false,
+      has_military_department: university.has_military_department || false,
+      has_grants: university.has_grants || false,
+      virtual_tour_url: university.virtual_tour_url || '',
+    },
+  });
 
-    setSaving(false);
-
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-    } else {
+  const mutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const { error } = await supabase
+        .from('universities')
+        .update({
+          description_ru: data.description_ru || null,
+          description_kz: data.description_kz || null,
+          description_en: data.description_en || null,
+          mission_ru: data.mission_ru || null,
+          mission_kz: data.mission_kz || null,
+          mission_en: data.mission_en || null,
+          website: data.website || null,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address || null,
+          students_count: data.students_count,
+          teachers_count: data.teachers_count,
+          has_dormitory: data.has_dormitory,
+          has_military_department: data.has_military_department,
+          has_grants: data.has_grants,
+          virtual_tour_url: data.virtual_tour_url || null,
+        })
+        .eq('id', university.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['universities'] });
       toast({ title: 'Успешно', description: 'Данные сохранены' });
       onUpdate();
-    }
-  };
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Информация о ВУЗе</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label>Название (RU)</Label>
-            <Input value={formData.name_ru || ''} disabled />
-          </div>
-          <div>
-            <Label>Город</Label>
-            <Input value={formData.city || ''} disabled />
-          </div>
-        </div>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <FormLabel>Название (RU)</FormLabel>
+                <Input value={university.name_ru || ''} disabled className="bg-muted" />
+              </div>
+              <div>
+                <FormLabel>Город</FormLabel>
+                <Input value={university.city || ''} disabled className="bg-muted" />
+              </div>
+            </div>
 
-        <div>
-          <Label>Описание (RU)</Label>
-          <Textarea
-            value={formData.description_ru || ''}
-            onChange={(e) => setFormData({ ...formData, description_ru: e.target.value })}
-            rows={4}
-          />
-        </div>
-
-        <div>
-          <Label>Описание (KZ)</Label>
-          <Textarea
-            value={formData.description_kz || ''}
-            onChange={(e) => setFormData({ ...formData, description_kz: e.target.value })}
-            rows={4}
-          />
-        </div>
-
-        <div>
-          <Label>Миссия (RU)</Label>
-          <Textarea
-            value={formData.mission_ru || ''}
-            onChange={(e) => setFormData({ ...formData, mission_ru: e.target.value })}
-            rows={3}
-          />
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <Label>Website</Label>
-            <Input
-              value={formData.website || ''}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+            <FormField
+              control={form.control}
+              name="description_ru"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Описание (RU)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={4} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label>Email</Label>
-            <Input
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Телефон</Label>
-            <Input
-              value={formData.phone || ''}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
-        </div>
 
-        <div>
-          <Label>Адрес</Label>
-          <Input
-            value={formData.address || ''}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="description_kz"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Описание (KZ)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={4} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label>Количество студентов</Label>
-            <Input
-              type="number"
-              value={formData.students_count || ''}
-              onChange={(e) => setFormData({ ...formData, students_count: parseInt(e.target.value) || null })}
+            <FormField
+              control={form.control}
+              name="mission_ru"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Миссия (RU)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label>Количество преподавателей</Label>
-            <Input
-              type="number"
-              value={formData.teachers_count || ''}
-              onChange={(e) => setFormData({ ...formData, teachers_count: parseInt(e.target.value) || null })}
-            />
-          </div>
-        </div>
 
-        <div>
-          <Label>Ссылка на виртуальный тур</Label>
-          <Input
-            value={formData.virtual_tour_url || ''}
-            onChange={(e) => setFormData({ ...formData, virtual_tour_url: e.target.value })}
-            placeholder="https://..."
-          />
-        </div>
+            <div className="grid md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Телефон</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div className="flex flex-wrap gap-6">
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={formData.has_dormitory || false}
-              onCheckedChange={(v) => setFormData({ ...formData, has_dormitory: v })}
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Адрес</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            <Label>Общежитие</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={formData.has_military_department || false}
-              onCheckedChange={(v) => setFormData({ ...formData, has_military_department: v })}
-            />
-            <Label>Военная кафедра</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={formData.has_grants || false}
-              onCheckedChange={(v) => setFormData({ ...formData, has_grants: v })}
-            />
-            <Label>Гранты</Label>
-          </div>
-        </div>
 
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Сохранение...' : 'Сохранить изменения'}
-        </Button>
+            <div className="grid md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="students_count"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Количество студентов</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="teachers_count"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Количество преподавателей</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="virtual_tour_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ссылка на виртуальный тур</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex flex-wrap gap-6">
+              <FormField
+                control={form.control}
+                name="has_dormitory"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Общежитие</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="has_military_department"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Военная кафедра</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="has_grants"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Гранты</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Сохранить изменения
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

@@ -1,15 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { SearchInput } from '@/components/shared/SearchInput';
+
+const partnershipSchema = z.object({
+  partner_name: z.string().min(1, 'Обязательное поле').max(255),
+  partner_country: z.string().min(1, 'Обязательное поле').max(100),
+  partnership_type: z.enum(['exchange', 'research', 'dual_degree', 'other']).optional().nullable(),
+  description_ru: z.string().max(2000).optional().or(z.literal('')),
+});
+
+type FormData = z.infer<typeof partnershipSchema>;
 
 interface Partnership {
   id: string;
@@ -24,78 +39,137 @@ interface PartnershipsEditorProps {
 }
 
 export default function PartnershipsEditor({ universityId }: PartnershipsEditorProps) {
-  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPartnership, setEditingPartnership] = useState<Partial<Partnership> | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchPartnerships();
-  }, [universityId]);
+  const { data: partnerships = [], isLoading } = useQuery({
+    queryKey: ['university-partnerships', universityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('partnerships')
+        .select('*')
+        .eq('university_id', universityId)
+        .order('partner_name');
+      if (error) throw error;
+      return data as Partnership[];
+    },
+  });
 
-  const fetchPartnerships = async () => {
-    const { data } = await supabase
-      .from('partnerships')
-      .select('*')
-      .eq('university_id', universityId)
-      .order('partner_name');
-    
-    if (data) setPartnerships(data);
-    setLoading(false);
-  };
+  const form = useForm<FormData>({
+    resolver: zodResolver(partnershipSchema),
+    defaultValues: {
+      partner_name: '',
+      partner_country: '',
+      partnership_type: null,
+      description_ru: '',
+    },
+  });
 
-  const handleSave = async () => {
-    if (!editingPartnership?.partner_name || !editingPartnership?.partner_country) {
-      toast({ title: 'Ошибка', description: 'Заполните обязательные поля', variant: 'destructive' });
-      return;
-    }
-
-    const data = {
-      university_id: universityId,
-      partner_name: editingPartnership.partner_name,
-      partner_country: editingPartnership.partner_country,
-      partnership_type: editingPartnership.partnership_type || null,
-      description_ru: editingPartnership.description_ru || null
-    };
-
-    let error;
-    if (editingPartnership.id) {
-      const result = await supabase.from('partnerships').update(data).eq('id', editingPartnership.id);
-      error = result.error;
-    } else {
-      const result = await supabase.from('partnerships').insert(data);
-      error = result.error;
-    }
-
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Успешно', description: editingPartnership.id ? 'Партнерство обновлено' : 'Партнерство создано' });
+  const createMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const { error } = await supabase.from('partnerships').insert({
+        partner_name: data.partner_name,
+        partner_country: data.partner_country,
+        partnership_type: data.partnership_type,
+        description_ru: data.description_ru || null,
+        university_id: universityId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['university-partnerships', universityId] });
+      toast({ title: 'Успешно', description: 'Партнерство создано' });
       setIsDialogOpen(false);
-      setEditingPartnership(null);
-      fetchPartnerships();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      const { error } = await supabase.from('partnerships').update({
+        ...data,
+        description_ru: data.description_ru || null,
+      }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['university-partnerships', universityId] });
+      toast({ title: 'Успешно', description: 'Партнерство обновлено' });
+      setIsDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('partnerships').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['university-partnerships', universityId] });
+      toast({ title: 'Успешно', description: 'Партнерство удалено' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleCreate = () => {
+    setEditingId(null);
+    form.reset({
+      partner_name: '',
+      partner_country: '',
+      partnership_type: null,
+      description_ru: '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (partnership: Partnership) => {
+    setEditingId(partnership.id);
+    form.reset({
+      partner_name: partnership.partner_name,
+      partner_country: partnership.partner_country,
+      partnership_type: partnership.partnership_type as any,
+      description_ru: partnership.description_ru || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = (data: FormData) => {
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data });
+    } else {
+      createMutation.mutate(data);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Удалить это партнерство?')) return;
-    
-    const { error } = await supabase.from('partnerships').delete().eq('id', id);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Успешно', description: 'Партнерство удалено' });
-      fetchPartnerships();
+  const handleDelete = () => {
+    if (deleteId) {
+      deleteMutation.mutate(deleteId);
+      setDeleteId(null);
     }
   };
+
+  const filteredPartnerships = partnerships.filter(p =>
+    p.partner_name.toLowerCase().includes(search.toLowerCase()) ||
+    p.partner_country.toLowerCase().includes(search.toLowerCase())
+  );
 
   const getTypeLabel = (type: string | null) => {
     const labels: Record<string, string> = {
       exchange: 'Обмен студентами',
       research: 'Научное сотрудничество',
       dual_degree: 'Двойной диплом',
-      other: 'Другое'
+      other: 'Другое',
     };
     return type ? labels[type] || type : '-';
   };
@@ -106,70 +180,96 @@ export default function PartnershipsEditor({ universityId }: PartnershipsEditorP
         <CardTitle>Международные партнерства</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingPartnership({})}>
+            <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
               Добавить партнерство
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingPartnership?.id ? 'Редактировать' : 'Добавить партнерство'}</DialogTitle>
+              <DialogTitle>{editingId ? 'Редактировать' : 'Добавить партнерство'}</DialogTitle>
             </DialogHeader>
-            {editingPartnership && (
-              <div className="grid gap-4 py-4">
-                <div>
-                  <Label>Название партнера *</Label>
-                  <Input 
-                    value={editingPartnership.partner_name || ''} 
-                    onChange={(e) => setEditingPartnership({...editingPartnership, partner_name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>Страна *</Label>
-                  <Input 
-                    value={editingPartnership.partner_country || ''} 
-                    onChange={(e) => setEditingPartnership({...editingPartnership, partner_country: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>Тип партнерства</Label>
-                  <Select 
-                    value={editingPartnership.partnership_type || ''} 
-                    onValueChange={(v) => setEditingPartnership({...editingPartnership, partnership_type: v})}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Выберите тип" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="exchange">Обмен студентами</SelectItem>
-                      <SelectItem value="research">Научное сотрудничество</SelectItem>
-                      <SelectItem value="dual_degree">Двойной диплом</SelectItem>
-                      <SelectItem value="other">Другое</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Описание</Label>
-                  <Textarea 
-                    value={editingPartnership.description_ru || ''} 
-                    onChange={(e) => setEditingPartnership({...editingPartnership, description_ru: e.target.value})}
-                    rows={3}
-                  />
-                </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="partner_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Название партнера *</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="partner_country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Страна *</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="partnership_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Тип партнерства</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Выберите тип" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="exchange">Обмен студентами</SelectItem>
+                          <SelectItem value="research">Научное сотрудничество</SelectItem>
+                          <SelectItem value="dual_degree">Двойной диплом</SelectItem>
+                          <SelectItem value="other">Другое</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description_ru"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Описание</FormLabel>
+                      <FormControl><Textarea {...field} rows={3} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Отмена</Button>
-                  <Button onClick={handleSave}>Сохранить</Button>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Отмена</Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Сохранить
+                  </Button>
                 </div>
-              </div>
-            )}
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        <div className="mb-4">
+          <SearchInput value={search} onChange={setSearch} placeholder="Поиск партнерств..." />
+        </div>
+
+        {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : partnerships.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Партнерства не добавлены</p>
+        ) : filteredPartnerships.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            {search ? 'Партнерства не найдены' : 'Партнерства не добавлены'}
+          </p>
         ) : (
           <div className="rounded-md border">
             <Table>
@@ -182,24 +282,16 @@ export default function PartnershipsEditor({ universityId }: PartnershipsEditorP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {partnerships.map((p) => (
+                {filteredPartnerships.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.partner_name}</TableCell>
                     <TableCell>{p.partner_country}</TableCell>
                     <TableCell>{getTypeLabel(p.partnership_type)}</TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => { setEditingPartnership(p); setIsDialogOpen(true); }}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleDelete(p.id)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(p.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -210,6 +302,16 @@ export default function PartnershipsEditor({ universityId }: PartnershipsEditorP
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Удалить партнерство?"
+        description="Это действие нельзя отменить."
+        onConfirm={handleDelete}
+        confirmText="Удалить"
+        loading={deleteMutation.isPending}
+      />
     </Card>
   );
 }
