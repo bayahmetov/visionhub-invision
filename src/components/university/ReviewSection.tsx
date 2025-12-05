@@ -92,7 +92,7 @@ export function ReviewSection({ universityId, universityName }: ReviewSectionPro
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
 
-  const canReview = user && role === 'student' && !userReview;
+  const canReview = user && (role === 'student' || role === 'admin') && !userReview;
 
   return (
     <div className="space-y-6">
