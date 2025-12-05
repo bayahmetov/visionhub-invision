@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Users, BookOpen, Trophy, Scale, ExternalLink, Star, GraduationCap, Calendar, Award } from 'lucide-react';
+import { MapPin, Users, BookOpen, Trophy, Scale, ExternalLink, Star, GraduationCap, Calendar, Award, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUniversityRating } from '@/hooks/useUniversityRating';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 type University = Tables<'universities'>;
 
@@ -21,8 +24,68 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
   const { t, getLocalizedField } = useLanguage();
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
   const { data: ratingData } = useUniversityRating(university.id);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const inCompare = isInCompare(university.id);
+
+  // Check if university is in favorites
+  const { data: isFavorite } = useQuery({
+    queryKey: ['favorite', university.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('university_id', university.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
+  // Toggle favorite mutation
+  const toggleFavorite = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated');
+      
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('university_id', university.id)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ university_id: university.id, user_id: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorite', university.id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      toast.success(isFavorite ? 'Убрано из избранного' : 'Добавлено в избранное');
+    },
+    onError: () => {
+      toast.error('Ошибка при обновлении избранного');
+    },
+  });
+
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      toast.error('Войдите, чтобы добавить в избранное');
+      return;
+    }
+    
+    toggleFavorite.mutate();
+  };
 
   const handleCompare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,6 +137,18 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
         <Badge className="absolute right-3 top-3 rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-medium">
           {typeLabels[university.type]}
         </Badge>
+
+        {/* Favorite Button */}
+        <button
+          onClick={handleFavorite}
+          className={cn(
+            'absolute right-3 bottom-3 flex h-9 w-9 items-center justify-center rounded-full transition-all',
+            'bg-background/80 backdrop-blur-sm hover:bg-background',
+            isFavorite && 'text-red-500'
+          )}
+        >
+          <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
+        </button>
 
         {/* Rating Badge */}
         {ratingData && ratingData.reviewsCount > 0 && (
