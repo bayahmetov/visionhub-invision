@@ -299,7 +299,7 @@ export default function Programs() {
                           {inCompare ? 'В сравнении' : 'Сравнить'}
                         </Button>
                         <Button asChild variant="outline" size="sm">
-                          <Link to={`/universities/${program.university_id}`}>
+                          <Link to={`/programs/${program.id}`}>
                             Подробнее
                           </Link>
                         </Button>
