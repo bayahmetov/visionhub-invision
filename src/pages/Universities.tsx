@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, MapPin, Users, Trophy, Scale, ExternalLink, Star, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Users, Scale, ExternalLink, Loader2, GraduationCap, Calendar, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -28,7 +28,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
-import { useUniversitiesRatings } from '@/hooks/useUniversityRating';
 import { cn } from '@/lib/utils';
 
 type University = Tables<'universities'>;
@@ -61,8 +60,62 @@ export default function Universities() {
     },
   });
 
-  const universityIds = useMemo(() => universities.map(u => u.id), [universities]);
-  const { data: ratingsMap = {} } = useUniversitiesRatings(universityIds);
+  // Fetch program counts for each university
+  const { data: programCounts = {} } = useQuery({
+    queryKey: ['university-program-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('university_id');
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data.forEach(p => {
+        counts[p.university_id] = (counts[p.university_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  // Fetch fields of study
+  const { data: fieldsOfStudy = [] } = useQuery({
+    queryKey: ['fields-of-study'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fields_of_study')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch programs with field_id for university
+  const { data: universityFields = {} } = useQuery({
+    queryKey: ['university-fields'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('university_id, field_id')
+        .not('field_id', 'is', null);
+      if (error) throw error;
+      
+      const fieldsMap: Record<string, Set<string>> = {};
+      data.forEach(p => {
+        if (!fieldsMap[p.university_id]) {
+          fieldsMap[p.university_id] = new Set();
+        }
+        if (p.field_id) {
+          fieldsMap[p.university_id].add(p.field_id);
+        }
+      });
+      
+      const result: Record<string, string[]> = {};
+      Object.entries(fieldsMap).forEach(([uid, fieldSet]) => {
+        result[uid] = Array.from(fieldSet);
+      });
+      return result;
+    },
+  });
 
   const types = [
     { id: 'national', label: t('filters.types.national') },
@@ -291,24 +344,33 @@ export default function Universities() {
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredUniversities.map((university) => {
                   const inCompare = isInCompare(university.id);
-                  const ratingData = ratingsMap[university.id];
+                  const programCount = programCounts[university.id] || 0;
+                  const uniFieldIds = universityFields[university.id] || [];
+                  const uniFields = fieldsOfStudy.filter(f => uniFieldIds.includes(f.id)).slice(0, 3);
+                  const extraFieldsCount = Math.max(0, uniFieldIds.length - 3);
                   
                   return (
                     <Card key={university.id} className={cn(
-                      'group overflow-hidden transition-all duration-300',
-                      'hover:shadow-lg hover:-translate-y-1',
-                      'border-border/50 bg-card'
+                      'group overflow-hidden transition-all duration-300 rounded-2xl',
+                      'hover:shadow-xl hover:-translate-y-1',
+                      'border border-border/60 bg-card'
                     )}>
-                      <div className="relative h-40 overflow-hidden">
+                      {/* Cover Image */}
+                      <div className="relative h-36 overflow-hidden">
                         <img
                           src={university.cover_image_url || '/placeholder.svg'}
                           alt={getLocalizedField(university, 'name')}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                         
-                        <div className="absolute bottom-0 left-4 translate-y-1/2">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-md">
+                        {/* Type Badge */}
+                        <Badge className="absolute right-3 top-3 rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-medium">
+                          {typeLabels[university.type]}
+                        </Badge>
+
+                        {/* Logo */}
+                        <div className="absolute -bottom-8 left-4">
+                          <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-lg">
                             <img
                               src={university.logo_url || ''}
                               alt=""
@@ -319,73 +381,97 @@ export default function Universities() {
                             />
                           </div>
                         </div>
-
-                        <Badge className="absolute right-3 top-3 bg-primary/90 text-primary-foreground">
-                          {typeLabels[university.type]}
-                        </Badge>
-
-                        {ratingData && ratingData.reviewsCount > 0 && (
-                          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur-sm">
-                            <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                            <span>{ratingData.averageRating.toFixed(1)}</span>
-                            <span className="text-muted-foreground">({ratingData.reviewsCount})</span>
-                          </div>
-                        )}
                       </div>
 
-                      <CardContent className="pt-10 pb-4">
-                        <h3 className="mb-2 font-display text-lg font-semibold leading-tight line-clamp-2">
+                      {/* Content */}
+                      <div className="px-4 pt-12 pb-4">
+                        <h3 className="mb-2 font-display text-lg font-bold leading-tight line-clamp-2 min-h-[3.5rem]">
                           {getLocalizedField(university, 'name')}
                         </h3>
 
-                        <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
+                        {/* Location & Ranking */}
+                        <div className="mb-4 flex items-center gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-primary" />
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
                             {university.city}
                           </span>
                           {university.ranking_national && (
-                            <span className="flex items-center gap-1">
-                              <Trophy className="h-3.5 w-3.5 text-accent" />
-                              #{university.ranking_national}
+                            <span className="flex items-center gap-1 text-accent font-medium">
+                              <Award className="h-4 w-4" />
+                              #{university.ranking_national} В Казахстане
                             </span>
                           )}
                         </div>
 
-                        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-2 text-center">
-                          <div>
-                            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
-                              <Users className="h-3.5 w-3.5 text-primary" />
+                        {/* Stats Row */}
+                        <div className="mb-4 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-background">
+                          <div className="py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+                              <Users className="h-4 w-4 text-muted-foreground" />
                               {formatNumber(university.students_count)}
                             </div>
-                            <div className="text-[10px] text-muted-foreground">{t('common.students')}</div>
+                            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Студентов</div>
                           </div>
-                          <div>
-                            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
-                              <Trophy className="h-3.5 w-3.5 text-accent" />
+                          <div className="py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+                              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                              {programCount}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Программ</div>
+                          </div>
+                          <div className="py-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-base font-bold text-foreground">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
                               {university.founded_year || '-'}
                             </div>
-                            <div className="text-[10px] text-muted-foreground">{t('university.founded')}</div>
+                            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Год основания</div>
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        {/* Field Tags */}
+                        {uniFields.length > 0 && (
+                          <div className="mb-4 flex flex-wrap gap-2">
+                            {uniFields.map(field => (
+                              <Badge 
+                                key={field.id} 
+                                variant="outline" 
+                                className="rounded-full text-xs font-normal px-3 py-1"
+                              >
+                                {getLocalizedField(field, 'name')}
+                              </Badge>
+                            ))}
+                            {extraFieldsCount > 0 && (
+                              <Badge variant="outline" className="rounded-full text-xs font-normal px-3 py-1">
+                                +{extraFieldsCount}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Buttons */}
+                        <div className="flex gap-2 pt-2 border-t border-border">
                           <Button
                             variant={inCompare ? 'default' : 'outline'}
-                            size="sm"
-                            className="flex-1 gap-1"
+                            className={cn(
+                              "flex-1 gap-2 rounded-lg h-10",
+                              !inCompare && "hover:bg-muted"
+                            )}
                             onClick={(e) => handleCompare(university, e)}
                           >
-                            <Scale className="h-3.5 w-3.5" />
+                            <Scale className="h-4 w-4" />
                             {inCompare ? 'В сравнении' : t('common.compare')}
                           </Button>
-                          <Button asChild size="sm" className="flex-1 gap-1">
+                          <Button 
+                            asChild 
+                            className="flex-1 gap-2 rounded-lg h-10 bg-primary hover:bg-primary/90"
+                          >
                             <Link to={`/universities/${university.id}`}>
                               {t('common.viewMore')}
-                              <ExternalLink className="h-3.5 w-3.5" />
+                              <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>
                         </div>
-                      </CardContent>
+                      </div>
                     </Card>
                   );
                 })}
