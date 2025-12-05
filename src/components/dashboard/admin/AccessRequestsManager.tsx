@@ -36,16 +36,27 @@ export default function AccessRequestsManager() {
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['admin-access-requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch requests
+      const { data: requestsData, error: requestsError } = await supabase
         .from('access_requests')
-        .select(`
-          id, user_id, university_id, status, message, admin_comment, created_at,
-          universities(name_ru, logo_url),
-          profiles!access_requests_user_id_fkey(full_name, phone)
-        `)
+        .select('id, user_id, university_id, status, message, admin_comment, created_at, universities(name_ru, logo_url)')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as unknown as AccessRequest[];
+      if (requestsError) throw requestsError;
+
+      // Fetch profiles for each user
+      const userIds = [...new Set(requestsData.map(r => r.user_id))];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .in('id', userIds);
+      if (profilesError) throw profilesError;
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+
+      return requestsData.map(r => ({
+        ...r,
+        profiles: profilesMap.get(r.user_id) || { full_name: null, phone: null }
+      })) as unknown as AccessRequest[];
     },
   });
 
