@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,10 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pencil, Search, Shield, GraduationCap, Building2 } from 'lucide-react';
+import { Pencil, Shield, GraduationCap, Building2, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { SearchInput } from '@/components/shared/SearchInput';
+import { Pagination } from '@/components/shared/Pagination';
+import { useUniversitiesList } from '@/hooks/useUniversities';
 
 type AppRole = 'admin' | 'student' | 'university';
 
@@ -21,43 +25,85 @@ interface UserWithRole {
   universities?: { name_ru: string } | null;
 }
 
-interface University {
-  id: string;
-  name_ru: string;
+interface UseUsersOptions {
+  page: number;
+  pageSize: number;
+  search: string;
+}
+
+function useUsers({ page, pageSize, search }: UseUsersOptions) {
+  return useQuery({
+    queryKey: ['users', { page, pageSize, search }],
+    queryFn: async () => {
+      let query = supabase
+        .from('profiles')
+        .select('id, full_name, university_id, universities(name_ru)', { count: 'exact' });
+
+      if (search) {
+        query = query.ilike('full_name', `%${search}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+
+      // Fetch roles
+      const userIds = data?.map(u => u.id) || [];
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
+
+      const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role as AppRole]));
+      const usersWithRoles = data?.map(u => ({ ...u, role: rolesMap.get(u.id) })) || [];
+
+      return {
+        data: usersWithRoles as UserWithRole[],
+        totalCount: count || 0,
+      };
+    },
+  });
 }
 
 export default function UsersManager() {
-  const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>('student');
   const [selectedUniversityId, setSelectedUniversityId] = useState<string>('');
+
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useUsers({ page, pageSize, search });
+  const { data: universities } = useUniversitiesList();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const updateMutation = useMutation({
+    mutationFn: async ({ userId, role, universityId }: { userId: string; role: AppRole; universityId: string | null }) => {
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role })
+        .eq('user_id', userId);
+      if (roleError) throw roleError;
 
-  const fetchData = async () => {
-    const [usersRes, universitiesRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, university_id, universities(name_ru)'),
-      supabase.from('universities').select('id, name_ru').order('name_ru')
-    ]);
-    
-    if (usersRes.data) {
-      // Fetch roles separately
-      const userIds = usersRes.data.map(u => u.id);
-      const { data: rolesData } = await supabase.from('user_roles').select('user_id, role').in('user_id', userIds);
-      const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role as AppRole]));
-      const usersWithRoles = usersRes.data.map(u => ({ ...u, role: rolesMap.get(u.id) }));
-      setUsers(usersWithRoles as UserWithRole[]);
-    }
-    if (universitiesRes.data) setUniversities(universitiesRes.data);
-    setLoading(false);
-  };
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ university_id: role === 'university' ? universityId : null })
+        .eq('id', userId);
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: 'Успешно', description: 'Пользователь обновлен' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
 
   const handleEdit = (user: UserWithRole) => {
     setEditingUser(user);
@@ -68,41 +114,16 @@ export default function UsersManager() {
 
   const handleSave = async () => {
     if (!editingUser) return;
-
-    // Update role
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .update({ role: selectedRole })
-      .eq('user_id', editingUser.id);
-
-    if (roleError) {
-      toast({ title: 'Ошибка', description: roleError.message, variant: 'destructive' });
-      return;
-    }
-
-    // Update university_id in profiles
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ university_id: selectedRole === 'university' ? selectedUniversityId || null : null })
-      .eq('id', editingUser.id);
-
-    if (profileError) {
-      toast({ title: 'Ошибка', description: profileError.message, variant: 'destructive' });
-      return;
-    }
-
-    toast({ title: 'Успешно', description: 'Пользователь обновлен' });
+    await updateMutation.mutateAsync({
+      userId: editingUser.id,
+      role: selectedRole,
+      universityId: selectedUniversityId || null,
+    });
     setIsDialogOpen(false);
     setEditingUser(null);
-    fetchData();
   };
 
-  const filteredUsers = users.filter(u => 
-    u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getRoleBadge = (role: AppRole) => {
+  const getRoleBadge = (role: AppRole | undefined) => {
     switch (role) {
       case 'admin':
         return <Badge variant="destructive" className="gap-1"><Shield className="h-3 w-3" />Админ</Badge>;
@@ -120,54 +141,59 @@ export default function UsersManager() {
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Поиск по имени..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={(value) => { setSearch(value); setPage(1); }}
+            placeholder="Поиск по имени..."
+          />
         </div>
-        
-        {loading ? (
+
+        {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Имя</TableHead>
-                  <TableHead>Роль</TableHead>
-                  <TableHead>Привязанный ВУЗ</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
+          <>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      Пользователи не найдены
-                    </TableCell>
+                    <TableHead>Имя</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Привязанный ВУЗ</TableHead>
+                    <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
-                ) : filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name || 'Без имени'}</TableCell>
-                    <TableCell>{getRoleBadge(user.role || 'student')}</TableCell>
-                    <TableCell>{user.universities?.name_ru || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {!data?.data.length ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        Пользователи не найдены
+                      </TableCell>
+                    </TableRow>
+                  ) : data.data.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.full_name || 'Без имени'}</TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{user.universities?.name_ru || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={data?.totalCount || 0}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
+          </>
         )}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -198,7 +224,7 @@ export default function UsersManager() {
                     <Select value={selectedUniversityId} onValueChange={setSelectedUniversityId}>
                       <SelectTrigger><SelectValue placeholder="Выберите ВУЗ" /></SelectTrigger>
                       <SelectContent>
-                        {universities.map((uni) => (
+                        {universities?.map((uni) => (
                           <SelectItem key={uni.id} value={uni.id}>{uni.name_ru}</SelectItem>
                         ))}
                       </SelectContent>
@@ -207,7 +233,10 @@ export default function UsersManager() {
                 )}
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Отмена</Button>
-                  <Button onClick={handleSave}>Сохранить</Button>
+                  <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                    {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Сохранить
+                  </Button>
                 </div>
               </div>
             )}

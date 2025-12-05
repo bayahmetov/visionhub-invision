@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { useUniversities, useUniversityMutations } from '@/hooks/useUniversities';
+import { SearchInput } from '@/components/shared/SearchInput';
+import { Pagination } from '@/components/shared/Pagination';
+import { SortableTableHead } from '@/components/shared/SortableTableHead';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { universitySchema, UniversityFormData } from '@/lib/validations/university';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type UniversityType = 'state' | 'private' | 'national' | 'international';
 
@@ -34,7 +41,7 @@ interface University {
   description_ru: string | null;
 }
 
-const emptyUniversity: Partial<University> = {
+const defaultValues: UniversityFormData = {
   name_ru: '',
   name_kz: '',
   name_en: '',
@@ -54,94 +61,96 @@ const emptyUniversity: Partial<University> = {
 };
 
 export default function UniversitiesManager() {
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name_ru');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUniversity, setEditingUniversity] = useState<Partial<University> | null>(null);
-  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUniversities();
-  }, []);
+  const { data, isLoading } = useUniversities({ page, pageSize, search, sortBy, sortOrder });
+  const { createMutation, updateMutation, deleteMutation } = useUniversityMutations();
 
-  const fetchUniversities = async () => {
-    const { data, error } = await supabase
-      .from('universities')
-      .select('*')
-      .order('name_ru');
-    
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+  const form = useForm<UniversityFormData>({
+    resolver: zodResolver(universitySchema),
+    defaultValues,
+  });
+
+  const handleSort = (key: string) => {
+    if (sortBy === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setUniversities(data || []);
+      setSortBy(key);
+      setSortOrder('asc');
     }
-    setLoading(false);
   };
 
-  const handleSave = async () => {
-    if (!editingUniversity?.name_ru || !editingUniversity?.city || !editingUniversity?.region) {
-      toast({ title: 'Ошибка', description: 'Заполните обязательные поля', variant: 'destructive' });
-      return;
-    }
+  const handleEdit = (university: University) => {
+    setEditingId(university.id);
+    form.reset({
+      name_ru: university.name_ru,
+      name_kz: university.name_kz || '',
+      name_en: university.name_en || '',
+      city: university.city,
+      region: university.region,
+      type: university.type,
+      founded_year: university.founded_year,
+      students_count: university.students_count,
+      teachers_count: university.teachers_count,
+      has_dormitory: university.has_dormitory || false,
+      has_military_department: university.has_military_department || false,
+      has_grants: university.has_grants || false,
+      website: university.website || '',
+      email: university.email || '',
+      phone: university.phone || '',
+      description_ru: university.description_ru || '',
+    });
+    setIsDialogOpen(true);
+  };
 
-    const universityData = {
-      name_ru: editingUniversity.name_ru,
-      name_kz: editingUniversity.name_kz || null,
-      name_en: editingUniversity.name_en || null,
-      city: editingUniversity.city,
-      region: editingUniversity.region,
-      type: editingUniversity.type || 'state',
-      founded_year: editingUniversity.founded_year || null,
-      students_count: editingUniversity.students_count || null,
-      teachers_count: editingUniversity.teachers_count || null,
-      has_dormitory: editingUniversity.has_dormitory || false,
-      has_military_department: editingUniversity.has_military_department || false,
-      has_grants: editingUniversity.has_grants || false,
-      website: editingUniversity.website || null,
-      email: editingUniversity.email || null,
-      phone: editingUniversity.phone || null,
-      description_ru: editingUniversity.description_ru || null
+  const handleCreate = () => {
+    setEditingId(null);
+    form.reset(defaultValues);
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = async (values: UniversityFormData) => {
+    const data = {
+      ...values,
+      name_kz: values.name_kz || null,
+      name_en: values.name_en || null,
+      website: values.website || null,
+      email: values.email || null,
+      phone: values.phone || null,
+      description_ru: values.description_ru || null,
     };
 
-    let error;
-    if (editingUniversity.id) {
-      const result = await supabase
-        .from('universities')
-        .update(universityData)
-        .eq('id', editingUniversity.id);
-      error = result.error;
+    if (editingId) {
+      await updateMutation.mutateAsync({ id: editingId, data });
     } else {
-      const result = await supabase.from('universities').insert(universityData);
-      error = result.error;
+      await createMutation.mutateAsync(data);
     }
+    setIsDialogOpen(false);
+  };
 
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Успешно', description: editingUniversity.id ? 'ВУЗ обновлен' : 'ВУЗ создан' });
-      setIsDialogOpen(false);
-      setEditingUniversity(null);
-      fetchUniversities();
+  const handleDelete = async () => {
+    if (deleteId) {
+      await deleteMutation.mutateAsync(deleteId);
+      setDeleteId(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Удалить этот ВУЗ?')) return;
-    
-    const { error } = await supabase.from('universities').delete().eq('id', id);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Успешно', description: 'ВУЗ удален' });
-      fetchUniversities();
-    }
+  const getTypeLabel = (type: UniversityType) => {
+    const labels: Record<UniversityType, string> = {
+      state: 'Государственный',
+      private: 'Частный',
+      national: 'Национальный',
+      international: 'Международный',
+    };
+    return labels[type];
   };
-
-  const filteredUniversities = universities.filter(u => 
-    u.name_ru.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <Card>
@@ -149,227 +158,346 @@ export default function UniversitiesManager() {
         <CardTitle>Управление ВУЗами</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingUniversity({ ...emptyUniversity })}>
+            <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
               Добавить ВУЗ
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingUniversity?.id ? 'Редактировать ВУЗ' : 'Добавить ВУЗ'}</DialogTitle>
+              <DialogTitle>{editingId ? 'Редактировать ВУЗ' : 'Добавить ВУЗ'}</DialogTitle>
             </DialogHeader>
-            {editingUniversity && (
-              <div className="grid gap-4 py-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Название (RU) *</Label>
-                    <Input 
-                      value={editingUniversity.name_ru || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, name_ru: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Название (KZ)</Label>
-                    <Input 
-                      value={editingUniversity.name_kz || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, name_kz: e.target.value})}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="name_ru"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Название (RU) *</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="name_kz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Название (KZ)</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                <div>
-                  <Label>Название (EN)</Label>
-                  <Input 
-                    value={editingUniversity.name_en || ''} 
-                    onChange={(e) => setEditingUniversity({...editingUniversity, name_en: e.target.value})}
+                <FormField
+                  control={form.control}
+                  name="name_en"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Название (EN)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Город *</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Регион *</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Город *</Label>
-                    <Input 
-                      value={editingUniversity.city || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, city: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Регион *</Label>
-                    <Input 
-                      value={editingUniversity.region || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, region: e.target.value})}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Тип</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="state">Государственный</SelectItem>
+                            <SelectItem value="private">Частный</SelectItem>
+                            <SelectItem value="national">Национальный</SelectItem>
+                            <SelectItem value="international">Международный</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="founded_year"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Год основания</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Тип</Label>
-                    <Select 
-                      value={editingUniversity.type} 
-                      onValueChange={(v) => setEditingUniversity({...editingUniversity, type: v as UniversityType})}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="state">Государственный</SelectItem>
-                        <SelectItem value="private">Частный</SelectItem>
-                        <SelectItem value="national">Национальный</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Год основания</Label>
-                    <Input 
-                      type="number"
-                      value={editingUniversity.founded_year || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, founded_year: parseInt(e.target.value) || null})}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Студентов</Label>
-                    <Input 
-                      type="number"
-                      value={editingUniversity.students_count || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, students_count: parseInt(e.target.value) || null})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Преподавателей</Label>
-                    <Input 
-                      type="number"
-                      value={editingUniversity.teachers_count || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, teachers_count: parseInt(e.target.value) || null})}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="students_count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Студентов</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="teachers_count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Преподавателей</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <div className="flex flex-wrap gap-6">
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={editingUniversity.has_dormitory || false}
-                      onCheckedChange={(v) => setEditingUniversity({...editingUniversity, has_dormitory: v})}
-                    />
-                    <Label>Общежитие</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={editingUniversity.has_military_department || false}
-                      onCheckedChange={(v) => setEditingUniversity({...editingUniversity, has_military_department: v})}
-                    />
-                    <Label>Военная кафедра</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={editingUniversity.has_grants || false}
-                      onCheckedChange={(v) => setEditingUniversity({...editingUniversity, has_grants: v})}
-                    />
-                    <Label>Гранты</Label>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Website</Label>
-                    <Input 
-                      value={editingUniversity.website || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, website: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input 
-                      type="email"
-                      value={editingUniversity.email || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, email: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label>Телефон</Label>
-                    <Input 
-                      value={editingUniversity.phone || ''} 
-                      onChange={(e) => setEditingUniversity({...editingUniversity, phone: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Описание</Label>
-                  <Textarea 
-                    value={editingUniversity.description_ru || ''} 
-                    onChange={(e) => setEditingUniversity({...editingUniversity, description_ru: e.target.value})}
-                    rows={3}
+                  <FormField
+                    control={form.control}
+                    name="has_dormitory"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Общежитие</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_military_department"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Военная кафедра</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_grants"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Гранты</FormLabel>
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Отмена</Button>
-                  <Button onClick={handleSave}>Сохранить</Button>
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="https://..." />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Телефон</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
-            )}
+                <FormField
+                  control={form.control}
+                  name="description_ru"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Описание</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Отмена
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {(createMutation.isPending || updateMutation.isPending) && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    Сохранить
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Поиск по названию или городу..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={(value) => { setSearch(value); setPage(1); }}
+            placeholder="Поиск по названию или городу..."
+          />
         </div>
-        
-        {loading ? (
+
+        {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Название</TableHead>
-                  <TableHead>Город</TableHead>
-                  <TableHead>Тип</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUniversities.length === 0 ? (
+          <>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      ВУЗы не найдены
-                    </TableCell>
+                    <SortableTableHead sortKey="name_ru" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort}>
+                      Название
+                    </SortableTableHead>
+                    <SortableTableHead sortKey="city" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort}>
+                      Город
+                    </SortableTableHead>
+                    <SortableTableHead sortKey="type" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort}>
+                      Тип
+                    </SortableTableHead>
+                    <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
-                ) : filteredUniversities.map((uni) => (
-                  <TableRow key={uni.id}>
-                    <TableCell className="font-medium">{uni.name_ru}</TableCell>
-                    <TableCell>{uni.city}</TableCell>
-                    <TableCell>
-                      {uni.type === 'state' ? 'Гос.' : uni.type === 'private' ? 'Частный' : 'Нац.'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => { setEditingUniversity(uni); setIsDialogOpen(true); }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleDelete(uni.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {!data?.data.length ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        ВУЗы не найдены
+                      </TableCell>
+                    </TableRow>
+                  ) : data.data.map((uni) => (
+                    <TableRow key={uni.id}>
+                      <TableCell className="font-medium">{uni.name_ru}</TableCell>
+                      <TableCell>{uni.city}</TableCell>
+                      <TableCell>{getTypeLabel(uni.type)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(uni as University)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(uni.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={data?.totalCount || 0}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
+          </>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Удалить ВУЗ?"
+        description="Это действие нельзя отменить. Все связанные программы и партнерства также будут удалены."
+        onConfirm={handleDelete}
+        confirmText="Удалить"
+        loading={deleteMutation.isPending}
+      />
     </Card>
   );
 }
