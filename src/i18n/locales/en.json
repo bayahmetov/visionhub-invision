@@ -1,0 +1,139 @@
+{
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "compare": "Compare",
+    "save": "Save",
+    "saved": "Saved",
+    "share": "Share",
+    "viewMore": "View More",
+    "showAll": "Show All",
+    "loading": "Loading...",
+    "noResults": "No results found",
+    "error": "An error occurred",
+    "close": "Close",
+    "apply": "Apply",
+    "reset": "Reset",
+    "students": "students",
+    "programs": "programs",
+    "universities": "universities",
+    "year": "year",
+    "years": "years"
+  },
+  "nav": {
+    "home": "Home",
+    "universities": "Universities",
+    "programs": "Programs",
+    "compare": "Compare",
+    "about": "About",
+    "contacts": "Contacts",
+    "login": "Login",
+    "profile": "Profile"
+  },
+  "hero": {
+    "title": "Find Your Perfect University",
+    "subtitle": "All universities of Kazakhstan in one place. Compare, choose, apply!",
+    "searchPlaceholder": "Enter university name or field of study...",
+    "cta": "Find University",
+    "stats": {
+      "universities": "universities",
+      "programs": "programs",
+      "students": "students"
+    }
+  },
+  "home": {
+    "topUniversities": "Top Universities",
+    "topUniversitiesDesc": "Leading universities of Kazakhstan by ranking",
+    "popularFields": "Popular Fields",
+    "popularFieldsDesc": "Choose your area of interest",
+    "compareTitle": "Compare Universities",
+    "compareDesc": "Compare up to 4 universities by all parameters: ranking, tuition, programs, facilities",
+    "toursTitle": "3D Campus Tours",
+    "toursDesc": "Explore universities from the comfort of your home",
+    "aiAssistant": "AI Assistant",
+    "aiAssistantDesc": "Personal consultant for choosing a university"
+  },
+  "filters": {
+    "type": "University Type",
+    "region": "Region",
+    "city": "City",
+    "field": "Field",
+    "degree": "Degree",
+    "tuition": "Tuition",
+    "hasGrants": "Grants Available",
+    "rating": "Rating",
+    "types": {
+      "national": "National",
+      "state": "State",
+      "private": "Private",
+      "international": "International"
+    },
+    "degrees": {
+      "bachelor": "Bachelor",
+      "master": "Master",
+      "doctorate": "Doctorate"
+    }
+  },
+  "fields": {
+    "it": "IT & Technology",
+    "medicine": "Medicine",
+    "law": "Law",
+    "economics": "Economics",
+    "engineering": "Engineering",
+    "humanities": "Humanities",
+    "natural": "Natural Sciences",
+    "arts": "Arts"
+  },
+  "university": {
+    "about": "About",
+    "programs": "Programs",
+    "admissions": "Admissions",
+    "tours": "3D Tour",
+    "partnerships": "Partners",
+    "contacts": "Contacts",
+    "mission": "Mission",
+    "history": "History",
+    "achievements": "Achievements",
+    "leadership": "Leadership",
+    "facilities": "Facilities",
+    "ranking": "Ranking",
+    "nationalRanking": "In Kazakhstan",
+    "internationalRanking": "International",
+    "founded": "Founded",
+    "faculty": "Faculty"
+  },
+  "admissions": {
+    "deadline": "Application Deadline",
+    "minScore": "Min. UNT Score",
+    "tuition": "Tuition Fee",
+    "grants": "Grants Available",
+    "requirements": "Requirements",
+    "documents": "Documents",
+    "apply": "Apply Now"
+  },
+  "compare": {
+    "title": "Compare Universities",
+    "addUniversity": "Add University",
+    "clear": "Clear",
+    "remove": "Remove",
+    "noSelection": "Add universities to compare",
+    "maxReached": "Maximum 4 universities"
+  },
+  "chat": {
+    "title": "AI Consultant",
+    "placeholder": "Ask about universities...",
+    "welcome": "Hi! I'll help you choose the right university. What field interests you?",
+    "suggestions": [
+      "Best IT universities in Almaty",
+      "Universities with medical grants",
+      "Compare KazNU and KBTU"
+    ]
+  },
+  "footer": {
+    "description": "DataHub of Universities RK — your guide to higher education in Kazakhstan",
+    "quickLinks": "Quick Links",
+    "contacts": "Contacts",
+    "social": "Social Media",
+    "copyright": "© 2025 DataHub Universities RK. All rights reserved."
+  }
+}
