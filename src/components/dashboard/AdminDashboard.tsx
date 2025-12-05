@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, BookOpen, Users, Handshake, Star, User, KeyRound, LogOut, Tag, Heart, Loader2, Calendar, MapPin, Newspaper } from 'lucide-react';
+import { Building2, BookOpen, Users, Handshake, Star, User, KeyRound, LogOut, Tag, Heart, Loader2, Calendar, MapPin, Newspaper, Megaphone } from 'lucide-react';
 import UniversitiesManager from './admin/UniversitiesManager';
 import ProgramsManager from './admin/ProgramsManager';
 import UsersManager from './admin/UsersManager';
@@ -11,6 +11,7 @@ import FieldsManager from './admin/FieldsManager';
 import { EventsManager } from './admin/EventsManager';
 import { CitiesManager } from './admin/CitiesManager';
 import { ArticlesManager } from './admin/ArticlesManager';
+import { AnnouncementsManager } from './admin/AnnouncementsManager';
 import ProfileTab from './shared/ProfileTab';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,10 @@ export default function AdminDashboard() {
             <Newspaper className="h-4 w-4" />
             <span className="hidden lg:inline">Статьи</span>
           </TabsTrigger>
+          <TabsTrigger value="announcements" className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4" />
+            <span className="hidden lg:inline">Объявления</span>
+          </TabsTrigger>
           <TabsTrigger value="partnerships" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
             <span className="hidden lg:inline">Партнерства</span>
@@ -188,6 +193,9 @@ export default function AdminDashboard() {
         </TabsContent>
         <TabsContent value="articles">
           <ArticlesManager />
+        </TabsContent>
+        <TabsContent value="announcements">
+          <AnnouncementsManager />
         </TabsContent>
         <TabsContent value="partnerships">
           <PartnershipsManager />
