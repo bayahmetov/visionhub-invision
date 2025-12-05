@@ -1,136 +1,156 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
-import { Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, Save, User } from 'lucide-react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
+const profileSchema = z.object({
+  full_name: z.string().min(1, 'Введите имя').max(100, 'Максимум 100 символов'),
+  phone: z.string().max(20, 'Максимум 20 символов').optional().or(z.literal('')),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface ProfileTabProps {
-  user: User | null;
-}
-
-interface Profile {
-  id: string;
-  full_name: string | null;
-  phone: string | null;
-  avatar_url: string | null;
+  user: SupabaseUser | null;
 }
 
 export default function ProfileTab({ user }: ProfileTabProps) {
   const { toast } = useToast();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
-  const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user!.id)
-      .maybeSingle();
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      full_name: '',
+      phone: '',
+    },
+    values: profile ? {
+      full_name: profile.full_name || '',
+      phone: profile.phone || '',
+    } : undefined,
+  });
 
-    if (data) {
-      setProfile(data);
-      setFullName(data.full_name || '');
-      setPhone(data.phone || '');
-    }
-    setLoading(false);
-  };
+  const mutation = useMutation({
+    mutationFn: async (data: ProfileFormData) => {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user!.id,
+          full_name: data.full_name,
+          phone: data.phone || null,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      toast({ title: 'Успешно', description: 'Профиль обновлен' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
 
-  const handleSave = async () => {
-    if (!user) return;
-    
-    setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        full_name: fullName || null,
-        phone: phone || null,
-        updated_at: new Date().toISOString()
-      });
-
-    if (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось сохранить профиль',
-        variant: 'destructive'
-      });
-    } else {
-      toast({
-        title: 'Успешно',
-        description: 'Профиль обновлен'
-      });
-    }
-    setSaving(false);
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <Card>
+        <CardContent className="py-12 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Личные данные</CardTitle>
-        <CardDescription>Информация о вашем аккаунте</CardDescription>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle>Данные профиля</CardTitle>
+            <CardDescription>Управление личной информацией</CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={user?.email || ''} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="created">Дата регистрации</Label>
-            <Input 
-              id="created" 
-              value={user?.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : ''} 
-              disabled 
-            />
-          </div>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">ФИО</Label>
-            <Input 
-              id="fullName" 
-              value={fullName} 
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Введите ваше полное имя"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Телефон</Label>
-            <Input 
-              id="phone" 
-              value={phone} 
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+7 (___) ___-__-__"
-            />
-          </div>
-        </div>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Полное имя *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Телефон</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="+7 (XXX) XXX-XX-XX" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Сохранение...' : 'Сохранить'}
-        </Button>
+            <div className="pt-4 border-t space-y-2">
+              <div>
+                <span className="text-sm font-medium">Email:</span>
+                <span className="text-sm text-muted-foreground ml-2">{user?.email}</span>
+              </div>
+              <div>
+                <span className="text-sm font-medium">Дата регистрации:</span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  {user?.created_at && new Date(user.created_at).toLocaleDateString('ru-RU')}
+                </span>
+              </div>
+            </div>
+
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Сохранить
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
