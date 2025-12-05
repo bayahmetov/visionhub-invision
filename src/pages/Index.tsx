@@ -1,13 +1,26 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { HeroSection } from '@/components/home/HeroSection';
+import { TopUniversities } from '@/components/home/TopUniversities';
+import { FieldsGrid } from '@/components/home/FieldsGrid';
+import { ComparePromo } from '@/components/home/ComparePromo';
+import { AIAssistantPromo } from '@/components/home/AIAssistantPromo';
 
 const Index = () => {
+  const handleOpenChat = () => {
+    // Trigger chat widget by clicking the chat button
+    const chatButton = document.querySelector('[data-chat-trigger]');
+    if (chatButton) {
+      (chatButton as HTMLButtonElement).click();
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      <HeroSection />
+      <TopUniversities />
+      <FieldsGrid />
+      <ComparePromo />
+      <AIAssistantPromo onOpenChat={handleOpenChat} />
+    </>
   );
 };
 
