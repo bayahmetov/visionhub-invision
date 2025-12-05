@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, Globe } from 'lucide-react';
+import { Menu, X, GraduationCap, Globe, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
 import { languages } from '@/i18n/config';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { t, language, setLanguage } = useLanguage();
+  const { user, role, signOut, loading } = useAuth();
   const location = useLocation();
 
   const navLinks = [
@@ -31,6 +34,14 @@ export function Navbar() {
   };
 
   const currentLang = languages.find(l => l.code === language);
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case 'admin': return 'Админ';
+      case 'university': return 'ВУЗ';
+      default: return 'Студент';
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -89,6 +100,37 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Auth Button */}
+          {!loading && (
+            user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="hidden sm:inline">{getRoleLabel()}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      Личный кабинет
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Выйти
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild size="sm">
+                <Link to="/auth">Войти</Link>
+              </Button>
+            )
+          )}
+
           {/* Mobile Menu Button */}
           <Button
             variant="ghost"
@@ -120,6 +162,23 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {user ? (
+              <Link
+                to="/dashboard"
+                onClick={() => setIsOpen(false)}
+                className="block px-4 py-3 rounded-md text-sm font-medium text-primary bg-primary/10"
+              >
+                Личный кабинет
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setIsOpen(false)}
+                className="block px-4 py-3 rounded-md text-sm font-medium text-primary bg-primary/10"
+              >
+                Войти
+              </Link>
+            )}
           </div>
         </div>
       )}
