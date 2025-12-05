@@ -241,9 +241,7 @@ export default function UniversityDetail() {
               <Star className="h-4 w-4 mr-1" />
               Отзывы
             </TabsTrigger>
-            {university.virtual_tour_url && (
-              <TabsTrigger value="tour">{t('university.tours')}</TabsTrigger>
-            )}
+            <TabsTrigger value="tour">{t('university.tours')}</TabsTrigger>
             <TabsTrigger value="contacts">{t('university.contacts')}</TabsTrigger>
           </TabsList>
 
@@ -373,16 +371,16 @@ export default function UniversityDetail() {
           </TabsContent>
 
           {/* Tour Tab */}
-          {university.virtual_tour_url && (
-            <TabsContent value="tour">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Play className="h-5 w-5 text-primary" />
-                    Виртуальный тур по кампусу
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+          <TabsContent value="tour">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Виртуальный тур по кампусу
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {university.virtual_tour_url ? (
                   <div className="aspect-video rounded-lg overflow-hidden bg-muted">
                     <iframe
                       src={university.virtual_tour_url}
@@ -391,10 +389,20 @@ export default function UniversityDetail() {
                       title="3D Tour"
                     />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
+                ) : (
+                  <div className="aspect-video rounded-lg bg-muted flex flex-col items-center justify-center text-center p-8">
+                    <Play className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">
+                      Виртуальный тур пока не добавлен
+                    </p>
+                    <p className="text-sm text-muted-foreground/70 mt-2">
+                      Университет может добавить ссылку на 3D-тур через личный кабинет
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Contacts Tab */}
           <TabsContent value="contacts">
