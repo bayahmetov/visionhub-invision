@@ -3,13 +3,27 @@ import { X, Scale, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCompare } from '@/contexts/CompareContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { universities } from '@/data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export function CompareBar() {
   const { compareList, removeFromCompare, clearCompare } = useCompare();
   const { t, getLocalizedField } = useLanguage();
 
-  const selectedUniversities = universities.filter(u => compareList.includes(u.id));
+  // Fetch selected universities from Supabase
+  const { data: selectedUniversities = [] } = useQuery({
+    queryKey: ['compare-universities', compareList],
+    queryFn: async () => {
+      if (compareList.length === 0) return [];
+      const { data, error } = await supabase
+        .from('universities')
+        .select('id, name_ru, name_kz, name_en, logo_url')
+        .in('id', compareList);
+      if (error) throw error;
+      return data;
+    },
+    enabled: compareList.length > 0,
+  });
 
   if (compareList.length === 0) return null;
 
@@ -29,11 +43,11 @@ export function CompareBar() {
               className="flex shrink-0 items-center gap-2 rounded-full bg-secondary px-3 py-1.5"
             >
               <img
-                src={uni.logo_url}
+                src={uni.logo_url || ''}
                 alt=""
                 className="h-5 w-5 rounded-full object-contain bg-background"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(uni.name_en)}&background=0A9EB7&color=fff&size=20`;
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(uni.name_en || uni.name_ru)}&background=0A9EB7&color=fff&size=20`;
                 }}
               />
               <span className="text-sm font-medium max-w-[100px] truncate">

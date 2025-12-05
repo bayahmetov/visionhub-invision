@@ -1,7 +1,30 @@
 import { GraduationCap, Target, Users, Lightbulb, Award, Globe } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function About() {
+  // Fetch real stats from Supabase
+  const { data: stats } = useQuery({
+    queryKey: ['about-stats'],
+    queryFn: async () => {
+      const [universitiesRes, programsRes, citiesRes] = await Promise.all([
+        supabase.from('universities').select('students_count', { count: 'exact' }),
+        supabase.from('programs').select('*', { count: 'exact', head: true }),
+        supabase.from('cities').select('*', { count: 'exact', head: true }),
+      ]);
+
+      const totalStudents = universitiesRes.data?.reduce((sum, u) => sum + (u.students_count || 0), 0) || 0;
+
+      return {
+        universities: universitiesRes.count || 0,
+        programs: programsRes.count || 0,
+        students: totalStudents,
+        cities: citiesRes.count || 0,
+      };
+    },
+  });
+
   const features = [
     {
       icon: GraduationCap,
@@ -25,9 +48,12 @@ export default function About() {
     },
   ];
 
-  const team = [
-    { name: 'Команда DataHub', role: 'Разработка' },
-  ];
+  const formatNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${Math.round(num / 1000)}K+`;
+    }
+    return num.toString();
+  };
 
   return (
     <div className="min-h-screen">
@@ -94,14 +120,14 @@ export default function About() {
         <div className="container">
           <div className="grid gap-8 md:grid-cols-4 text-center">
             {[
-              { value: '130+', label: 'Университетов' },
-              { value: '2500+', label: 'Программ' },
-              { value: '500K+', label: 'Студентов' },
-              { value: '17', label: 'Регионов' },
+              { value: stats?.universities || 0, label: 'Университетов' },
+              { value: stats?.programs || 0, label: 'Программ' },
+              { value: stats?.students || 0, label: 'Студентов', format: true },
+              { value: stats?.cities || 0, label: 'Городов' },
             ].map((stat, idx) => (
               <div key={idx}>
                 <div className="font-display text-4xl font-bold text-primary mb-1">
-                  {stat.value}
+                  {stat.format ? formatNumber(stat.value) : stat.value}
                 </div>
                 <div className="text-muted-foreground">{stat.label}</div>
               </div>

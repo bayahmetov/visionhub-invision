@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { University } from '@/data/mockData';
 
 interface CompareContextType {
   compareList: string[];

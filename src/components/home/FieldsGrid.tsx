@@ -1,14 +1,62 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { fieldsOfStudy, universities } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function FieldsGrid() {
-  const { t } = useLanguage();
+  const { t, getLocalizedField } = useLanguage();
 
-  const getFieldCount = (fieldId: string) => {
-    return universities.filter(u => u.fields.includes(fieldId)).length;
-  };
+  // Fetch fields of study from Supabase
+  const { data: fieldsOfStudy = [], isLoading } = useQuery({
+    queryKey: ['fields-of-study'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fields_of_study')
+        .select('*')
+        .order('name_ru');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch university counts per field
+  const { data: fieldCounts = {} } = useQuery({
+    queryKey: ['university-field-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('university_fields')
+        .select('field_id');
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data.forEach(uf => {
+        counts[uf.field_id] = (counts[uf.field_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <section className="py-16 md:py-24 bg-muted/30">
+        <div className="container">
+          <div className="mb-10 text-center">
+            <Skeleton className="h-10 w-64 mx-auto mb-2" />
+            <Skeleton className="h-5 w-96 mx-auto" />
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (fieldsOfStudy.length === 0) return null;
 
   return (
     <section className="py-16 md:py-24 bg-muted/30">
@@ -26,7 +74,7 @@ export function FieldsGrid() {
         {/* Fields Grid */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {fieldsOfStudy.map((field) => {
-            const count = getFieldCount(field.id);
+            const count = fieldCounts[field.id] || 0;
             return (
               <Link
                 key={field.id}
@@ -38,11 +86,11 @@ export function FieldsGrid() {
                 )}
               >
                 {/* Icon */}
-                <div className="mb-4 text-4xl">{field.icon}</div>
+                <div className="mb-4 text-4xl">{field.icon || '📚'}</div>
                 
                 {/* Title */}
                 <h3 className="mb-1 font-display font-semibold">
-                  {t(`fields.${field.id}`)}
+                  {getLocalizedField(field, 'name')}
                 </h3>
                 
                 {/* Count */}

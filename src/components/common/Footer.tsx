@@ -1,9 +1,34 @@
 import { Link } from 'react-router-dom';
 import { GraduationCap, Mail, Phone, MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Footer() {
   const { t } = useLanguage();
+
+  // Fetch real stats from Supabase
+  const { data: universitiesCount = 0 } = useQuery({
+    queryKey: ['universities-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('universities')
+        .select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  const { data: programsCount = 0 } = useQuery({
+    queryKey: ['programs-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('programs')
+        .select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
 
   return (
     <footer className="border-t border-border bg-muted/30">
@@ -75,11 +100,11 @@ export function Footer() {
             <h3 className="mb-4 font-display font-semibold">DataHub</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-secondary/50 p-3 text-center">
-                <div className="text-2xl font-bold text-primary">130+</div>
+                <div className="text-2xl font-bold text-primary">{universitiesCount}</div>
                 <div className="text-xs text-muted-foreground">ВУЗов</div>
               </div>
               <div className="rounded-lg bg-secondary/50 p-3 text-center">
-                <div className="text-2xl font-bold text-primary">2500+</div>
+                <div className="text-2xl font-bold text-primary">{programsCount}</div>
                 <div className="text-xs text-muted-foreground">Программ</div>
               </div>
             </div>
