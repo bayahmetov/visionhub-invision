@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Megaphone } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useUniversities, useUniversityMutations } from '@/hooks/useUniversities';
 import { SearchInput } from '@/components/shared/SearchInput';
@@ -19,6 +19,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { universitySchema, UniversityFormData } from '@/lib/validations/university';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { UniversityAnnouncementsDialog } from './UniversityAnnouncementsDialog';
 
 type UniversityType = 'state' | 'private' | 'national' | 'international';
 
@@ -76,6 +77,7 @@ export default function UniversitiesManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [announcementsUniversity, setAnnouncementsUniversity] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isLoading } = useUniversities({ page, pageSize, search, sortBy, sortOrder });
   const { createMutation, updateMutation, deleteMutation } = useUniversityMutations();
@@ -511,6 +513,14 @@ export default function UniversitiesManager() {
                       <TableCell>{uni.city}</TableCell>
                       <TableCell>{getTypeLabel(uni.type)}</TableCell>
                       <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setAnnouncementsUniversity({ id: uni.id, name: uni.name_ru })}
+                          title="Объявления"
+                        >
+                          <Megaphone className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(uni as University)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -542,6 +552,11 @@ export default function UniversitiesManager() {
         onConfirm={handleDelete}
         confirmText="Удалить"
         loading={deleteMutation.isPending}
+      />
+
+      <UniversityAnnouncementsDialog
+        university={announcementsUniversity}
+        onClose={() => setAnnouncementsUniversity(null)}
       />
     </Card>
   );
