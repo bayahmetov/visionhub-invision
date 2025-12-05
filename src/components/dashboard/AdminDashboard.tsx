@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, BookOpen, Users, Handshake, Star } from 'lucide-react';
+import { Building2, BookOpen, Users, Handshake, Star, User } from 'lucide-react';
 import UniversitiesManager from './admin/UniversitiesManager';
 import ProgramsManager from './admin/ProgramsManager';
 import UsersManager from './admin/UsersManager';
 import PartnershipsManager from './admin/PartnershipsManager';
 import ReviewsManager from './admin/ReviewsManager';
+import ProfileTab from './shared/ProfileTab';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 mb-8">
+        <TabsList className="grid w-full grid-cols-6 mb-8">
           <TabsTrigger value="universities" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">ВУЗы</span>
@@ -53,6 +53,10 @@ export default function AdminDashboard() {
             <Star className="h-4 w-4" />
             <span className="hidden sm:inline">Отзывы</span>
           </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Профиль</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="universities">
@@ -69,6 +73,9 @@ export default function AdminDashboard() {
         </TabsContent>
         <TabsContent value="reviews">
           <ReviewsManager />
+        </TabsContent>
+        <TabsContent value="profile">
+          <ProfileTab user={user} />
         </TabsContent>
       </Tabs>
     </div>
