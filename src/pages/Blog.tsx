@@ -182,48 +182,50 @@ export default function Blog() {
             {/* Articles Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {restArticles.map(article => (
-                <Card key={article.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  {article.cover_image_url ? (
-                    <div className="h-40 overflow-hidden">
-                      <img 
-                        src={article.cover_image_url} 
-                        alt={article.title_ru}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
-                      <BookOpen className="h-12 w-12 text-primary/40" />
-                    </div>
-                  )}
-                  
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary" className={getCategoryStyle(article.category)}>
-                        {categories.find(c => c.value === article.category)?.label}
-                      </Badge>
-                    </div>
-                    
-                    <h3 className="font-semibold mb-2 line-clamp-2">{article.title_ru}</h3>
-                    
-                    {article.excerpt_ru && (
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {article.excerpt_ru}
-                      </p>
+                <Link key={article.id} to={`/blog/${article.slug}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    {article.cover_image_url ? (
+                      <div className="h-40 overflow-hidden">
+                        <img 
+                          src={article.cover_image_url} 
+                          alt={article.title_ru}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-40 bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-primary/40" />
+                      </div>
                     )}
                     
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {article.published_at && format(parseISO(article.published_at), 'd MMM', { locale: ru })}
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="secondary" className={getCategoryStyle(article.category)}>
+                          {categories.find(c => c.value === article.category)?.label}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
-                        {article.views_count || 0}
+                      
+                      <h3 className="font-semibold mb-2 line-clamp-2">{article.title_ru}</h3>
+                      
+                      {article.excerpt_ru && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          {article.excerpt_ru}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {article.published_at && format(parseISO(article.published_at), 'd MMM', { locale: ru })}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          {article.views_count || 0}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           </>

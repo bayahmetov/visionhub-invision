@@ -24,6 +24,7 @@ import Map from "./pages/Map";
 import Events from "./pages/Events";
 import Cities from "./pages/Cities";
 import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                     <Route path="/events" element={<Events />} />
                     <Route path="/cities" element={<Cities />} />
                     <Route path="/blog" element={<Blog />} />
+                    <Route path="/blog/:slug" element={<BlogArticle />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/dashboard" element={<Dashboard />} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, GraduationCap, BookOpen, Users, Sparkles } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,10 +17,12 @@ export function HeroSection() {
     }
   };
 
-  const stats = [
-    { icon: GraduationCap, value: '130+', label: t('hero.stats.universities') },
-    { icon: BookOpen, value: '2500+', label: t('hero.stats.programs') },
-    { icon: Users, value: '500K+', label: t('hero.stats.students') },
+  const quickFilters = [
+    { id: 'it', label: 'IT' },
+    { id: 'medicine', label: 'Медицина' },
+    { id: 'law', label: 'Право' },
+    { id: 'economics', label: 'Экономика' },
+    { id: 'engineering', label: 'Инженерия' },
   ];
 
   return (
@@ -78,32 +80,17 @@ export function HeroSection() {
           </form>
 
           {/* Quick Filters */}
-          <div className="mb-12 flex flex-wrap justify-center gap-2">
-            {['IT', 'Медицина', 'Право', 'Экономика', 'Инженерия'].map((field) => (
+          <div className="flex flex-wrap justify-center gap-2">
+            {quickFilters.map((field) => (
               <Button
-                key={field}
+                key={field.id}
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/universities?field=${field.toLowerCase()}`)}
+                onClick={() => navigate(`/universities?field=${field.id}`)}
                 className="rounded-full border border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
               >
-                {field}
+                {field.label}
               </Button>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="text-center">
-                <div className="mb-2 flex items-center justify-center gap-2">
-                  <stat.icon className="h-6 w-6 text-accent" />
-                  <span className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">
-                    {stat.value}
-                  </span>
-                </div>
-                <span className="text-sm text-primary-foreground/70">{stat.label}</span>
-              </div>
             ))}
           </div>
         </div>
