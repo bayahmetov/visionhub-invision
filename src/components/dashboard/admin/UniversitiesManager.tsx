@@ -39,6 +39,7 @@ interface University {
   email: string | null;
   phone: string | null;
   description_ru: string | null;
+  virtual_tour_url: string | null;
 }
 
 const defaultValues: UniversityFormData = {
@@ -57,7 +58,8 @@ const defaultValues: UniversityFormData = {
   website: '',
   email: '',
   phone: '',
-  description_ru: ''
+  description_ru: '',
+  virtual_tour_url: ''
 };
 
 export default function UniversitiesManager() {
@@ -106,6 +108,7 @@ export default function UniversitiesManager() {
       email: university.email || '',
       phone: university.phone || '',
       description_ru: university.description_ru || '',
+      virtual_tour_url: university.virtual_tour_url || '',
     });
     setIsDialogOpen(true);
   };
@@ -125,6 +128,7 @@ export default function UniversitiesManager() {
       email: values.email || null,
       phone: values.phone || null,
       description_ru: values.description_ru || null,
+      virtual_tour_url: values.virtual_tour_url || null,
     };
 
     if (editingId) {
@@ -401,6 +405,19 @@ export default function UniversitiesManager() {
                       <FormLabel>Описание</FormLabel>
                       <FormControl>
                         <Textarea {...field} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="virtual_tour_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL виртуального тура</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://..." />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
