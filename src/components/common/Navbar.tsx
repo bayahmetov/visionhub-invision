@@ -24,7 +24,6 @@ export function Navbar() {
     { href: '/', label: t('nav.home') },
     { href: '/universities', label: t('nav.universities') },
     { href: '/programs', label: t('nav.programs') },
-    { href: '/compare', label: t('nav.compare') },
     { href: '/about', label: t('nav.about') },
   ];
 

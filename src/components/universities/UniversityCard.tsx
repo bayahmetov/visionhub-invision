@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Users, BookOpen, Trophy, Heart, Scale, ExternalLink } from 'lucide-react';
+import { MapPin, Users, BookOpen, Trophy, Heart, Scale, ExternalLink, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { useCompare } from '@/contexts/CompareContext';
 import { University } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useUniversityRating } from '@/hooks/useUniversityRating';
 
 interface UniversityCardProps {
   university: University;
@@ -17,6 +18,7 @@ interface UniversityCardProps {
 export function UniversityCard({ university, className }: UniversityCardProps) {
   const { t, getLocalizedField } = useLanguage();
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
+  const { data: ratingData } = useUniversityRating(university.id);
 
   const inCompare = isInCompare(university.id);
 
@@ -86,6 +88,15 @@ export function UniversityCard({ university, className }: UniversityCardProps) {
         >
           {typeLabels[university.type]}
         </Badge>
+
+        {/* Rating Badge */}
+        {ratingData && ratingData.reviewsCount > 0 && (
+          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur-sm">
+            <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+            <span>{ratingData.averageRating.toFixed(1)}</span>
+            <span className="text-muted-foreground">({ratingData.reviewsCount})</span>
+          </div>
+        )}
       </div>
 
       <CardContent className="pt-10 pb-4">
