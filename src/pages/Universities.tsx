@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Search, SlidersHorizontal, X, MapPin, Users, Trophy, Scale, ExternalLink, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -19,25 +21,48 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { UniversityCard } from '@/components/universities/UniversityCard';
 import { CompareBar } from '@/components/compare/CompareBar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
-import { universities, regions, fieldsOfStudy } from '@/data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
+import { useUniversitiesRatings } from '@/hooks/useUniversityRating';
+import { cn } from '@/lib/utils';
+
+type University = Tables<'universities'>;
+
+const regions = [
+  'Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 
+  'Павлодар', 'Семей', 'Атырау', 'Костанай', 'Тараз'
+];
 
 export default function Universities() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { t } = useLanguage();
-  const { compareList } = useCompare();
+  const { t, getLocalizedField } = useLanguage();
+  const { compareList, addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('');
-  const [selectedFields, setSelectedFields] = useState<string[]>(
-    searchParams.get('field') ? [searchParams.get('field')!] : []
-  );
   const [hasGrants, setHasGrants] = useState(false);
   const [sortBy, setSortBy] = useState<string>('ranking');
+
+  const { data: universities = [], isLoading } = useQuery({
+    queryKey: ['universities-page'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('universities')
+        .select('*')
+        .order('ranking_national', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const universityIds = useMemo(() => universities.map(u => u.id), [universities]);
+  const { data: ratingsMap = {} } = useUniversitiesRatings(universityIds);
 
   const types = [
     { id: 'national', label: t('filters.types.national') },
@@ -49,57 +74,42 @@ export default function Universities() {
   const filteredUniversities = useMemo(() => {
     let result = [...universities];
 
-    // Search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(u => 
         u.name_ru.toLowerCase().includes(query) ||
-        u.name_en.toLowerCase().includes(query) ||
-        u.name_kz.toLowerCase().includes(query) ||
+        u.name_en?.toLowerCase().includes(query) ||
+        u.name_kz?.toLowerCase().includes(query) ||
         u.city.toLowerCase().includes(query)
       );
     }
 
-    // Type filter
     if (selectedTypes.length > 0) {
       result = result.filter(u => selectedTypes.includes(u.type));
     }
 
-    // Region filter
     if (selectedRegion && selectedRegion !== 'all') {
       result = result.filter(u => u.region === selectedRegion || u.city === selectedRegion);
     }
 
-    // Fields filter
-    if (selectedFields.length > 0) {
-      result = result.filter(u => 
-        selectedFields.some(f => u.fields.includes(f))
-      );
-    }
-
-    // Grants filter
     if (hasGrants) {
       result = result.filter(u => u.has_grants);
     }
 
-    // Sort
     switch (sortBy) {
       case 'ranking':
-        result.sort((a, b) => a.ranking_national - b.ranking_national);
+        result.sort((a, b) => (a.ranking_national || 999) - (b.ranking_national || 999));
         break;
       case 'name':
         result.sort((a, b) => a.name_ru.localeCompare(b.name_ru));
         break;
       case 'students':
-        result.sort((a, b) => b.students_count - a.students_count);
-        break;
-      case 'programs':
-        result.sort((a, b) => b.programs_count - a.programs_count);
+        result.sort((a, b) => (b.students_count || 0) - (a.students_count || 0));
         break;
     }
 
     return result;
-  }, [searchQuery, selectedTypes, selectedRegion, selectedFields, hasGrants, sortBy]);
+  }, [universities, searchQuery, selectedTypes, selectedRegion, hasGrants, sortBy]);
 
   const toggleType = (typeId: string) => {
     setSelectedTypes(prev => 
@@ -109,28 +119,48 @@ export default function Universities() {
     );
   };
 
-  const toggleField = (fieldId: string) => {
-    setSelectedFields(prev => 
-      prev.includes(fieldId) 
-        ? prev.filter(f => f !== fieldId)
-        : [...prev, fieldId]
-    );
-  };
-
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedTypes([]);
     setSelectedRegion('');
-    setSelectedFields([]);
     setHasGrants(false);
     setSearchParams({});
   };
 
-  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || selectedFields.length > 0 || hasGrants;
+  const handleCompare = (university: University, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isInCompare(university.id)) {
+      removeFromCompare(university.id);
+      toast.info('Убрано из сравнения');
+    } else {
+      if (canAddMore) {
+        addToCompare(university.id);
+        toast.success('Добавлено к сравнению');
+      } else {
+        toast.error(t('compare.maxReached'));
+      }
+    }
+  };
+
+  const formatNumber = (num: number | null) => {
+    if (!num) return '-';
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+    return num.toString();
+  };
+
+  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || (selectedRegion && selectedRegion !== 'all') || hasGrants;
+
+  const typeLabels: Record<string, string> = {
+    national: t('filters.types.national'),
+    state: t('filters.types.state'),
+    private: t('filters.types.private'),
+    international: t('filters.types.international'),
+  };
 
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Search */}
       <div>
         <Label className="mb-2 block">{t('common.search')}</Label>
         <div className="relative">
@@ -144,7 +174,6 @@ export default function Universities() {
         </div>
       </div>
 
-      {/* Type */}
       <div>
         <Label className="mb-3 block">{t('filters.type')}</Label>
         <div className="space-y-2">
@@ -163,7 +192,6 @@ export default function Universities() {
         </div>
       </div>
 
-      {/* Region */}
       <div>
         <Label className="mb-2 block">{t('filters.region')}</Label>
         <Select value={selectedRegion} onValueChange={setSelectedRegion}>
@@ -181,26 +209,6 @@ export default function Universities() {
         </Select>
       </div>
 
-      {/* Fields */}
-      <div>
-        <Label className="mb-3 block">{t('filters.field')}</Label>
-        <div className="space-y-2">
-          {fieldsOfStudy.map((field) => (
-            <div key={field.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`field-${field.id}`}
-                checked={selectedFields.includes(field.id)}
-                onCheckedChange={() => toggleField(field.id)}
-              />
-              <Label htmlFor={`field-${field.id}`} className="text-sm font-normal cursor-pointer">
-                {field.icon} {t(`fields.${field.id}`)}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Grants */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="grants"
@@ -212,7 +220,6 @@ export default function Universities() {
         </Label>
       </div>
 
-      {/* Clear */}
       {hasActiveFilters && (
         <Button variant="outline" onClick={clearFilters} className="w-full">
           {t('common.reset')}
@@ -223,7 +230,6 @@ export default function Universities() {
 
   return (
     <div className="min-h-screen bg-muted/20">
-      {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container py-8">
           <h1 className="mb-2 font-display text-3xl font-bold">
@@ -237,7 +243,6 @@ export default function Universities() {
 
       <div className="container py-8">
         <div className="flex gap-8">
-          {/* Desktop Sidebar */}
           <aside className="hidden w-72 shrink-0 lg:block">
             <div className="sticky top-24 rounded-xl border border-border bg-card p-6">
               <h2 className="mb-4 font-display font-semibold">{t('common.filter')}</h2>
@@ -245,21 +250,13 @@ export default function Universities() {
             </div>
           </aside>
 
-          {/* Main Content */}
           <div className="flex-1">
-            {/* Toolbar */}
             <div className="mb-6 flex items-center justify-between gap-4">
-              {/* Mobile Filter Button */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" className="gap-2 lg:hidden">
                     <SlidersHorizontal className="h-4 w-4" />
                     {t('common.filter')}
-                    {hasActiveFilters && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                        !
-                      </span>
-                    )}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left">
@@ -272,23 +269,8 @@ export default function Universities() {
                 </SheetContent>
               </Sheet>
 
-              {/* Active Filters Tags */}
-              <div className="hidden flex-1 flex-wrap gap-2 lg:flex">
-                {selectedFields.map(f => (
-                  <Button
-                    key={f}
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => toggleField(f)}
-                    className="gap-1"
-                  >
-                    {t(`fields.${f}`)}
-                    <X className="h-3 w-3" />
-                  </Button>
-                ))}
-              </div>
+              <div className="flex-1" />
 
-              {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
@@ -297,17 +279,116 @@ export default function Universities() {
                   <SelectItem value="ranking">По рейтингу</SelectItem>
                   <SelectItem value="name">По названию</SelectItem>
                   <SelectItem value="students">По студентам</SelectItem>
-                  <SelectItem value="programs">По программам</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Grid */}
-            {filteredUniversities.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredUniversities.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredUniversities.map((uni) => (
-                  <UniversityCard key={uni.id} university={uni} />
-                ))}
+                {filteredUniversities.map((university) => {
+                  const inCompare = isInCompare(university.id);
+                  const ratingData = ratingsMap[university.id];
+                  
+                  return (
+                    <Card key={university.id} className={cn(
+                      'group overflow-hidden transition-all duration-300',
+                      'hover:shadow-lg hover:-translate-y-1',
+                      'border-border/50 bg-card'
+                    )}>
+                      <div className="relative h-40 overflow-hidden">
+                        <img
+                          src={university.cover_image_url || '/placeholder.svg'}
+                          alt={getLocalizedField(university, 'name')}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                        
+                        <div className="absolute bottom-0 left-4 translate-y-1/2">
+                          <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-md">
+                            <img
+                              src={university.logo_url || ''}
+                              alt=""
+                              className="h-full w-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(university.name_en || university.name_ru)}&background=0A9EB7&color=fff&size=64`;
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <Badge className="absolute right-3 top-3 bg-primary/90 text-primary-foreground">
+                          {typeLabels[university.type]}
+                        </Badge>
+
+                        {ratingData && ratingData.reviewsCount > 0 && (
+                          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur-sm">
+                            <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+                            <span>{ratingData.averageRating.toFixed(1)}</span>
+                            <span className="text-muted-foreground">({ratingData.reviewsCount})</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <CardContent className="pt-10 pb-4">
+                        <h3 className="mb-2 font-display text-lg font-semibold leading-tight line-clamp-2">
+                          {getLocalizedField(university, 'name')}
+                        </h3>
+
+                        <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-primary" />
+                            {university.city}
+                          </span>
+                          {university.ranking_national && (
+                            <span className="flex items-center gap-1">
+                              <Trophy className="h-3.5 w-3.5 text-accent" />
+                              #{university.ranking_national}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-2 text-center">
+                          <div>
+                            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
+                              <Users className="h-3.5 w-3.5 text-primary" />
+                              {formatNumber(university.students_count)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">{t('common.students')}</div>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-center gap-1 text-sm font-semibold">
+                              <Trophy className="h-3.5 w-3.5 text-accent" />
+                              {university.founded_year || '-'}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">{t('university.founded')}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant={inCompare ? 'default' : 'outline'}
+                            size="sm"
+                            className="flex-1 gap-1"
+                            onClick={(e) => handleCompare(university, e)}
+                          >
+                            <Scale className="h-3.5 w-3.5" />
+                            {inCompare ? 'В сравнении' : t('common.compare')}
+                          </Button>
+                          <Button asChild size="sm" className="flex-1 gap-1">
+                            <Link to={`/universities/${university.id}`}>
+                              {t('common.viewMore')}
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-card p-12 text-center">
@@ -321,7 +402,6 @@ export default function Universities() {
         </div>
       </div>
 
-      {/* Compare Bar */}
       {compareList.length > 0 && <CompareBar />}
     </div>
   );
