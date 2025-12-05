@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Tag } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,7 @@ const programSchema = z.object({
   grants_available: z.boolean().optional(),
   ent_min_score: z.number().min(0).max(140).nullable().optional(),
   description_ru: z.string().max(5000).optional().or(z.literal('')),
+  field_id: z.string().nullable().optional(),
 });
 
 type FormData = z.infer<typeof programSchema>;
@@ -42,6 +44,12 @@ interface Program {
   grants_available: boolean | null;
   ent_min_score: number | null;
   description_ru: string | null;
+  field_id: string | null;
+}
+
+interface FieldOfStudy {
+  id: string;
+  name_ru: string;
 }
 
 interface ProgramsEditorProps {
@@ -69,6 +77,18 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
     },
   });
 
+  const { data: fieldsOfStudy = [] } = useQuery({
+    queryKey: ['fields-of-study'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fields_of_study')
+        .select('id, name_ru')
+        .order('name_ru');
+      if (error) throw error;
+      return data as FieldOfStudy[];
+    },
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(programSchema),
     defaultValues: {
@@ -80,6 +100,7 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
       grants_available: false,
       ent_min_score: null,
       description_ru: '',
+      field_id: null,
     },
   });
 
@@ -94,12 +115,14 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
         grants_available: data.grants_available,
         ent_min_score: data.ent_min_score,
         description_ru: data.description_ru || null,
+        field_id: data.field_id || null,
         university_id: universityId,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['university-programs', universityId] });
+      queryClient.invalidateQueries({ queryKey: ['university-fields'] });
       toast({ title: 'Успешно', description: 'Программа создана' });
       setIsDialogOpen(false);
     },
@@ -111,14 +134,21 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
       const { error } = await supabase.from('programs').update({
-        ...data,
+        name_ru: data.name_ru,
         name_kz: data.name_kz || null,
+        degree_level: data.degree_level,
+        duration_years: data.duration_years,
+        tuition_fee_kzt: data.tuition_fee_kzt,
+        grants_available: data.grants_available,
+        ent_min_score: data.ent_min_score,
         description_ru: data.description_ru || null,
+        field_id: data.field_id || null,
       }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['university-programs', universityId] });
+      queryClient.invalidateQueries({ queryKey: ['university-fields'] });
       toast({ title: 'Успешно', description: 'Программа обновлена' });
       setIsDialogOpen(false);
     },
@@ -134,6 +164,7 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['university-programs', universityId] });
+      queryClient.invalidateQueries({ queryKey: ['university-fields'] });
       toast({ title: 'Успешно', description: 'Программа удалена' });
     },
     onError: (error: Error) => {
@@ -152,6 +183,7 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
       grants_available: false,
       ent_min_score: null,
       description_ru: '',
+      field_id: null,
     });
     setIsDialogOpen(true);
   };
@@ -167,6 +199,7 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
       grants_available: program.grants_available || false,
       ent_min_score: program.ent_min_score,
       description_ru: program.description_ru || '',
+      field_id: program.field_id,
     });
     setIsDialogOpen(true);
   };
@@ -199,6 +232,12 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
     return labels[level];
   };
 
+  const getFieldName = (fieldId: string | null) => {
+    if (!fieldId) return null;
+    const field = fieldsOfStudy.find(f => f.id === fieldId);
+    return field?.name_ru || null;
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -210,9 +249,10 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
               Добавить программу
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Редактировать программу' : 'Добавить программу'}</DialogTitle>
+              <DialogDescription>Заполните информацию о программе</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -315,6 +355,32 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
                 </div>
                 <FormField
                   control={form.control}
+                  name="field_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Направление</FormLabel>
+                      <Select 
+                        onValueChange={(val) => field.onChange(val === 'none' ? null : val)} 
+                        value={field.value || 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите направление" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Без направления</SelectItem>
+                          {fieldsOfStudy.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>{f.name_ru}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="grants_available"
                   render={({ field }) => (
                     <FormItem className="flex items-center gap-2">
@@ -367,6 +433,7 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Название</TableHead>
+                  <TableHead>Направление</TableHead>
                   <TableHead>Уровень</TableHead>
                   <TableHead>Срок</TableHead>
                   <TableHead className="text-right">Действия</TableHead>
@@ -376,6 +443,16 @@ export default function ProgramsEditor({ universityId }: ProgramsEditorProps) {
                 {filteredPrograms.map((prog) => (
                   <TableRow key={prog.id}>
                     <TableCell className="font-medium">{prog.name_ru}</TableCell>
+                    <TableCell>
+                      {getFieldName(prog.field_id) ? (
+                        <Badge variant="outline" className="text-xs">
+                          <Tag className="h-3 w-3 mr-1" />
+                          {getFieldName(prog.field_id)}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>{getDegreeLabel(prog.degree_level)}</TableCell>
                     <TableCell>{prog.duration_years} лет</TableCell>
                     <TableCell className="text-right">

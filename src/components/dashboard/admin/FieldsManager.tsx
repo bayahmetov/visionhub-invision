@@ -66,6 +66,14 @@ export default function FieldsManager() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FieldFormData) => {
+      // Moderate content
+      const { moderateContent } = await import('@/hooks/useContentModeration');
+      const textToCheck = `${data.name_ru} ${data.name_kz || ''} ${data.name_en || ''}`;
+      const modResult = await moderateContent(textToCheck, 'field');
+      if (!modResult.isClean) {
+        throw new Error(modResult.reason || 'Недопустимый контент');
+      }
+
       const { error } = await supabase
         .from('fields_of_study')
         .insert({

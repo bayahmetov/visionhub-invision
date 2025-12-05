@@ -12,6 +12,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reviewSchema, ReviewFormData } from '@/lib/validations/review';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { moderateContent } from '@/hooks/useContentModeration';
 
 interface ReviewFormProps {
   onSuccess: () => void;
@@ -33,6 +34,14 @@ export default function ReviewForm({ onSuccess }: ReviewFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: ReviewFormData) => {
+      // Check content moderation for comment
+      if (data.comment) {
+        const modResult = await moderateContent(data.comment, 'review');
+        if (!modResult.isClean) {
+          throw new Error(modResult.reason || 'Недопустимый контент в отзыве');
+        }
+      }
+
       const { error } = await supabase.from('reviews').upsert({
         user_id: user!.id,
         university_id: data.university_id,
