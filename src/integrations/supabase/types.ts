@@ -414,6 +414,42 @@ export type Database = {
         }
         Relationships: []
       }
+      university_fields: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          university_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          university_id: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_fields_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "fields_of_study"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_fields_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string

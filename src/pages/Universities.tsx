@@ -90,29 +90,21 @@ export default function Universities() {
     },
   });
 
-  // Fetch programs with field_id for university
+  // Fetch university fields from junction table
   const { data: universityFields = {} } = useQuery({
     queryKey: ['university-fields'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('programs')
-        .select('university_id, field_id')
-        .not('field_id', 'is', null);
+        .from('university_fields')
+        .select('university_id, field_id');
       if (error) throw error;
       
-      const fieldsMap: Record<string, Set<string>> = {};
-      data.forEach(p => {
-        if (!fieldsMap[p.university_id]) {
-          fieldsMap[p.university_id] = new Set();
-        }
-        if (p.field_id) {
-          fieldsMap[p.university_id].add(p.field_id);
-        }
-      });
-      
       const result: Record<string, string[]> = {};
-      Object.entries(fieldsMap).forEach(([uid, fieldSet]) => {
-        result[uid] = Array.from(fieldSet);
+      data.forEach(uf => {
+        if (!result[uf.university_id]) {
+          result[uf.university_id] = [];
+        }
+        result[uf.university_id].push(uf.field_id);
       });
       return result;
     },

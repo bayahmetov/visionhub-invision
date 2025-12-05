@@ -1,10 +1,12 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Save, Loader2 } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
+import { Save, Loader2, X, Plus } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -12,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ImageUpload } from '@/components/shared/ImageUpload';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const universityEditorSchema = z.object({
   description_ru: z.string().max(5000, 'Максимум 5000 символов').optional().or(z.literal('')),
@@ -44,6 +47,38 @@ interface UniversityEditorProps {
 export default function UniversityEditor({ university, onUpdate }: UniversityEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [fieldToAdd, setFieldToAdd] = useState<string>('');
+
+  // Fetch available fields
+  const { data: fields = [] } = useQuery({
+    queryKey: ['fields_of_study'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fields_of_study')
+        .select('*')
+        .order('name_ru');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch university's current fields
+  const { data: universityFields = [], refetch: refetchUniversityFields } = useQuery({
+    queryKey: ['university_fields', university.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('university_fields')
+        .select('field_id')
+        .eq('university_id', university.id);
+      if (error) throw error;
+      return data.map(f => f.field_id);
+    },
+  });
+
+  useEffect(() => {
+    setSelectedFields(universityFields);
+  }, [universityFields]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(universityEditorSchema),
@@ -106,6 +141,45 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
     },
   });
 
+  const addFieldMutation = useMutation({
+    mutationFn: async (fieldId: string) => {
+      const { error } = await supabase
+        .from('university_fields')
+        .insert({ university_id: university.id, field_id: fieldId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchUniversityFields();
+      queryClient.invalidateQueries({ queryKey: ['universities'] });
+      setFieldToAdd('');
+      toast({ title: 'Успешно', description: 'Направление добавлено' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const removeFieldMutation = useMutation({
+    mutationFn: async (fieldId: string) => {
+      const { error } = await supabase
+        .from('university_fields')
+        .delete()
+        .eq('university_id', university.id)
+        .eq('field_id', fieldId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchUniversityFields();
+      queryClient.invalidateQueries({ queryKey: ['universities'] });
+      toast({ title: 'Успешно', description: 'Направление удалено' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const availableFields = fields.filter(f => !selectedFields.includes(f.id));
+
   return (
     <Card>
       <CardHeader>
@@ -140,6 +214,53 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
                 folder={`university-${university.id}/covers`}
                 aspectRatio="wide"
               />
+            </div>
+
+            {/* Field Tags Section */}
+            <div className="space-y-3">
+              <FormLabel>Направления обучения</FormLabel>
+              <div className="flex flex-wrap gap-2">
+                {selectedFields.map(fieldId => {
+                  const field = fields.find(f => f.id === fieldId);
+                  return field ? (
+                    <Badge key={fieldId} variant="secondary" className="flex items-center gap-1">
+                      {field.name_ru}
+                      <button
+                        type="button"
+                        onClick={() => removeFieldMutation.mutate(fieldId)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+              {availableFields.length > 0 && (
+                <div className="flex gap-2">
+                  <Select value={fieldToAdd} onValueChange={setFieldToAdd}>
+                    <SelectTrigger className="w-[250px]">
+                      <SelectValue placeholder="Выберите направление" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableFields.map(field => (
+                        <SelectItem key={field.id} value={field.id}>
+                          {field.name_ru}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => fieldToAdd && addFieldMutation.mutate(fieldToAdd)}
+                    disabled={!fieldToAdd || addFieldMutation.isPending}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             <FormField
