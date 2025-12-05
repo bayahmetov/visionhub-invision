@@ -612,7 +612,10 @@ export type Database = {
       universities: {
         Row: {
           accreditation: string | null
+          achievements: string[] | null
           address: string | null
+          admission_end_date: string | null
+          admission_start_date: string | null
           city: string
           cover_image_url: string | null
           created_at: string | null
@@ -637,6 +640,8 @@ export type Database = {
           phone: string | null
           ranking_national: number | null
           ranking_qs: number | null
+          rector_name: string | null
+          rector_photo_url: string | null
           region: string
           students_count: number | null
           teachers_count: number | null
@@ -647,7 +652,10 @@ export type Database = {
         }
         Insert: {
           accreditation?: string | null
+          achievements?: string[] | null
           address?: string | null
+          admission_end_date?: string | null
+          admission_start_date?: string | null
           city: string
           cover_image_url?: string | null
           created_at?: string | null
@@ -672,6 +680,8 @@ export type Database = {
           phone?: string | null
           ranking_national?: number | null
           ranking_qs?: number | null
+          rector_name?: string | null
+          rector_photo_url?: string | null
           region: string
           students_count?: number | null
           teachers_count?: number | null
@@ -682,7 +692,10 @@ export type Database = {
         }
         Update: {
           accreditation?: string | null
+          achievements?: string[] | null
           address?: string | null
+          admission_end_date?: string | null
+          admission_start_date?: string | null
           city?: string
           cover_image_url?: string | null
           created_at?: string | null
@@ -707,6 +720,8 @@ export type Database = {
           phone?: string | null
           ranking_national?: number | null
           ranking_qs?: number | null
+          rector_name?: string | null
+          rector_photo_url?: string | null
           region?: string
           students_count?: number | null
           teachers_count?: number | null

@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { 
   MapPin, Globe, Mail, Phone, Trophy, Users, BookOpen, Calendar,
-  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2, Megaphone, Eye, Handshake, ClipboardList
+  Scale, Share2, ExternalLink, Play, Building, Target, History, Star, Loader2, Megaphone, Eye, Handshake, ClipboardList, Award, User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -304,6 +304,55 @@ export default function UniversityDetail() {
                 </Card>
               )}
             </div>
+
+            {/* Rector Section */}
+            {(university as any).rector_name && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-primary" />
+                    Руководство
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    {(university as any).rector_photo_url && (
+                      <img
+                        src={(university as any).rector_photo_url}
+                        alt="Ректор"
+                        className="h-20 w-20 rounded-full object-cover border-2 border-border"
+                      />
+                    )}
+                    <div>
+                      <p className="font-semibold text-lg">{(university as any).rector_name}</p>
+                      <p className="text-sm text-muted-foreground">Ректор</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Achievements Section */}
+            {(university as any).achievements && (university as any).achievements.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Достижения
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {(university as any).achievements.map((achievement: string, index: number) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <Trophy className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+                        <span className="text-muted-foreground">{achievement}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Facilities */}
             <Card>

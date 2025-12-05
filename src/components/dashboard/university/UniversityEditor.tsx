@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Save, Loader2, X, Plus } from 'lucide-react';
+import { Save, Loader2, X, Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,11 @@ const universityEditorSchema = z.object({
   virtual_tour_url: z.string().url('Некорректный URL').optional().or(z.literal('')),
   logo_url: z.string().nullable().optional(),
   cover_image_url: z.string().nullable().optional(),
+  rector_name: z.string().max(200, 'Максимум 200 символов').optional().or(z.literal('')),
+  rector_photo_url: z.string().nullable().optional(),
+  achievements: z.array(z.string()).optional(),
+  admission_start_date: z.string().optional().or(z.literal('')),
+  admission_end_date: z.string().optional().or(z.literal('')),
 });
 
 const typeOptions = [
@@ -114,6 +119,11 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
       virtual_tour_url: university.virtual_tour_url || '',
       logo_url: university.logo_url || null,
       cover_image_url: university.cover_image_url || null,
+      rector_name: university.rector_name || '',
+      rector_photo_url: university.rector_photo_url || null,
+      achievements: university.achievements || [],
+      admission_start_date: university.admission_start_date || '',
+      admission_end_date: university.admission_end_date || '',
     },
   });
 
@@ -143,6 +153,11 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
           virtual_tour_url: data.virtual_tour_url || null,
           logo_url: data.logo_url || null,
           cover_image_url: data.cover_image_url || null,
+          rector_name: data.rector_name || null,
+          rector_photo_url: data.rector_photo_url || null,
+          achievements: data.achievements || null,
+          admission_start_date: data.admission_start_date || null,
+          admission_end_date: data.admission_end_date || null,
         })
         .eq('id', university.id);
       if (error) throw error;
@@ -488,7 +503,110 @@ export default function UniversityEditor({ university, onUpdate }: UniversityEdi
               )}
             />
 
-            <div className="flex flex-wrap gap-6">
+            {/* Rector Section */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="font-semibold mb-4">Руководство</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="rector_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ФИО ректора</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Иванов Иван Иванович" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <ImageUpload
+                  label="Фото ректора"
+                  value={form.watch('rector_photo_url') || null}
+                  onChange={(url) => form.setValue('rector_photo_url', url)}
+                  folder={`university-${university.id}/rector`}
+                  aspectRatio="square"
+                />
+              </div>
+            </div>
+
+            {/* Achievements Section */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="font-semibold mb-4">Достижения</h3>
+              <div className="space-y-2">
+                {(form.watch('achievements') || []).map((achievement, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={achievement}
+                      onChange={(e) => {
+                        const newAchievements = [...(form.watch('achievements') || [])];
+                        newAchievements[index] = e.target.value;
+                        form.setValue('achievements', newAchievements);
+                      }}
+                      placeholder="Достижение"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const newAchievements = (form.watch('achievements') || []).filter((_, i) => i !== index);
+                        form.setValue('achievements', newAchievements);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const current = form.watch('achievements') || [];
+                    form.setValue('achievements', [...current, '']);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить достижение
+                </Button>
+              </div>
+            </div>
+
+            {/* Admission Dates Section */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="font-semibold mb-4">Сроки приёма документов</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="admission_start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Начало приёма</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="admission_end_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Окончание приёма</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-6 border-t pt-6 mt-6">
               <FormField
                 control={form.control}
                 name="has_dormitory"
