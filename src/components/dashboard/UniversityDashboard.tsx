@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, BookOpen, Handshake, LogOut, AlertCircle, User, Megaphone } from 'lucide-react';
+import { Building2, BookOpen, Handshake, LogOut, AlertCircle, User, Megaphone, Calendar, BarChart3, ClipboardList } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import UniversityEditor from './university/UniversityEditor';
 import ProgramsEditor from './university/ProgramsEditor';
 import PartnershipsEditor from './university/PartnershipsEditor';
 import AnnouncementsEditor from './university/AnnouncementsEditor';
+import EventsEditor from './university/EventsEditor';
+import StatsTab from './university/StatsTab';
+import AdmissionsTab from './university/AdmissionsTab';
 import ProfileTab from './shared/ProfileTab';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -84,7 +87,7 @@ export default function UniversityDashboard() {
       </div>
 
       <Tabs defaultValue="info">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap">
           <TabsTrigger value="info" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Информация
@@ -93,13 +96,25 @@ export default function UniversityDashboard() {
             <BookOpen className="h-4 w-4" />
             Программы
           </TabsTrigger>
-          <TabsTrigger value="partnerships" className="flex items-center gap-2">
-            <Handshake className="h-4 w-4" />
-            Партнерства
+          <TabsTrigger value="admissions" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Приемная комиссия
+          </TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            События
           </TabsTrigger>
           <TabsTrigger value="announcements" className="flex items-center gap-2">
             <Megaphone className="h-4 w-4" />
             Объявления
+          </TabsTrigger>
+          <TabsTrigger value="partnerships" className="flex items-center gap-2">
+            <Handshake className="h-4 w-4" />
+            Партнерства
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Статистика
           </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -115,12 +130,24 @@ export default function UniversityDashboard() {
           <ProgramsEditor universityId={universityId} />
         </TabsContent>
 
-        <TabsContent value="partnerships">
-          <PartnershipsEditor universityId={universityId} />
+        <TabsContent value="admissions">
+          <AdmissionsTab universityId={universityId} university={university} />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <EventsEditor universityId={universityId} />
         </TabsContent>
 
         <TabsContent value="announcements">
           <AnnouncementsEditor universityId={universityId} />
+        </TabsContent>
+
+        <TabsContent value="partnerships">
+          <PartnershipsEditor universityId={universityId} />
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <StatsTab universityId={universityId} />
         </TabsContent>
 
         <TabsContent value="profile">
