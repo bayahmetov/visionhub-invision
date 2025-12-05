@@ -185,6 +185,13 @@ export default function Universities() {
       case 'students':
         result.sort((a, b) => (b.students_count || 0) - (a.students_count || 0));
         break;
+      case 'rating':
+        result.sort((a, b) => {
+          const ratingA = ratingsData[a.id]?.averageRating || 0;
+          const ratingB = ratingsData[b.id]?.averageRating || 0;
+          return ratingB - ratingA;
+        });
+        break;
     }
 
     return result;
@@ -404,7 +411,8 @@ export default function Universities() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ranking">По рейтингу</SelectItem>
+                  <SelectItem value="ranking">По нац. рейтингу</SelectItem>
+                  <SelectItem value="rating">По оценкам</SelectItem>
                   <SelectItem value="name">По названию</SelectItem>
                   <SelectItem value="students">По студентам</SelectItem>
                 </SelectContent>
