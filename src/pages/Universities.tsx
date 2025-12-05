@@ -367,9 +367,11 @@ export default function Universities() {
                         <Badge className="absolute right-3 top-3 rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-medium">
                           {typeLabels[university.type]}
                         </Badge>
+                      </div>
 
-                        {/* Logo */}
-                        <div className="absolute -bottom-8 left-4">
+                      {/* Logo - positioned outside cover container */}
+                      <div className="relative">
+                        <div className="absolute -top-8 left-4 z-10">
                           <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-background bg-card p-2 shadow-lg">
                             <img
                               src={university.logo_url || ''}
@@ -384,7 +386,7 @@ export default function Universities() {
                       </div>
 
                       {/* Content */}
-                      <div className="px-4 pt-12 pb-4">
+                      <div className="px-4 pt-10 pb-4">
                         <h3 className="mb-2 font-display text-lg font-bold leading-tight line-clamp-2 min-h-[3.5rem]">
                           {getLocalizedField(university, 'name')}
                         </h3>
