@@ -196,8 +196,9 @@ export default function Map() {
           margin: 0;
           min-width: 250px;
         }
-        .leaflet-attribution-flag {
-          display: none !important;
+        .leaflet-control-attribution a:first-child {
+    /* Скрывает первый элемент (ссылку Leaflet), содержащий флаг */
+    display: none !important;
         }
       `}</style>
 
