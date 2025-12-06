@@ -22,7 +22,7 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 delete Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({
   // iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
+  // iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow,
 });
 
