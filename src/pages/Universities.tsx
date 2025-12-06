@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, Users, Scale, ExternalLink, Loader2, GraduationCap, Calendar, Award, Star } from 'lucide-react';
+import { SlidersHorizontal, MapPin, Users, Scale, ExternalLink, Loader2, GraduationCap, Calendar, Award, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SearchInput } from '@/components/shared/SearchInput';
 import { useUniversitiesRatings } from '@/hooks/useUniversityRating';
 
 type University = Tables<'universities'>;
@@ -45,20 +45,11 @@ export default function Universities() {
   
   const initialField = searchParams.get('field');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>(searchParams.get('city') || '');
   const [selectedFields, setSelectedFields] = useState<string[]>(initialField ? [initialField] : []);
   const [hasGrants, setHasGrants] = useState(false);
   const [minRating, setMinRating] = useState<string>('');
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchQuery(localSearchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [localSearchQuery]);
   const [sortBy, setSortBy] = useState<string>('ranking');
 
   const { data: universities = [], isLoading } = useQuery({
@@ -215,7 +206,6 @@ export default function Universities() {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setLocalSearchQuery('');
     setSelectedTypes([]);
     setSelectedRegion('');
     setSelectedFields([]);
@@ -260,15 +250,12 @@ export default function Universities() {
     <div className="space-y-6">
       <div>
         <Label className="mb-2 block">{t('common.search')}</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('hero.searchPlaceholder')}
-            value={localSearchQuery}
-            onChange={(e) => setLocalSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t('hero.searchPlaceholder')}
+          debounceMs={300}
+        />
       </div>
 
       <div>
