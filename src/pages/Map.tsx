@@ -1,42 +1,55 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Icon, DivIcon } from 'leaflet';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { MapPin, Users, GraduationCap, Building2, Filter } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { Icon, DivIcon } from "leaflet";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MapPin, Users, GraduationCap, Building2, Filter } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // @ts-ignore
 delete Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
+  // iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow,
 });
 
 const universityTypes = [
-  { value: 'state', label: 'Государственные' },
-  { value: 'private', label: 'Частные' },
-  { value: 'national', label: 'Национальные' },
-  { value: 'international', label: 'Международные' },
+  { value: "state", label: "Государственные" },
+  { value: "private", label: "Частные" },
+  { value: "national", label: "Национальные" },
+  { value: "international", label: "Международные" },
 ];
 
 const regions = [
-  'Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Павлодар',
-  'Семей', 'Атырау', 'Костанай', 'Тараз', 'Актау', 'Уральск',
-  'Петропавловск', 'Кызылорда', 'Талдыкорган', 'Туркестан'
+  "Алматы",
+  "Астана",
+  "Шымкент",
+  "Караганда",
+  "Актобе",
+  "Павлодар",
+  "Семей",
+  "Атырау",
+  "Костанай",
+  "Тараз",
+  "Актау",
+  "Уральск",
+  "Петропавловск",
+  "Кызылорда",
+  "Талдыкорган",
+  "Туркестан",
 ];
 
 function MapController({ center }: { center: [number, number] }) {
@@ -49,19 +62,21 @@ function MapController({ center }: { center: [number, number] }) {
 
 export default function Map() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<string>('all');
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [hasGrants, setHasGrants] = useState(false);
   const [hasDormitory, setHasDormitory] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([48.0196, 66.9237]);
 
   const { data: universities, isLoading } = useQuery({
-    queryKey: ['universities-map'],
+    queryKey: ["universities-map"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('universities')
-        .select('id, name_ru, city, region, type, students_count, latitude, longitude, has_grants, has_dormitory, logo_url')
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null);
+        .from("universities")
+        .select(
+          "id, name_ru, city, region, type, students_count, latitude, longitude, has_grants, has_dormitory, logo_url",
+        )
+        .not("latitude", "is", null)
+        .not("longitude", "is", null);
       if (error) throw error;
       return data;
     },
@@ -69,9 +84,9 @@ export default function Map() {
 
   const filteredUniversities = useMemo(() => {
     if (!universities) return [];
-    return universities.filter(uni => {
+    return universities.filter((uni) => {
       if (selectedTypes.length > 0 && !selectedTypes.includes(uni.type)) return false;
-      if (selectedRegion !== 'all' && uni.city !== selectedRegion) return false;
+      if (selectedRegion !== "all" && uni.city !== selectedRegion) return false;
       if (hasGrants && !uni.has_grants) return false;
       if (hasDormitory && !uni.has_dormitory) return false;
       return true;
@@ -79,26 +94,29 @@ export default function Map() {
   }, [universities, selectedTypes, selectedRegion, hasGrants, hasDormitory]);
 
   const toggleType = (type: string) => {
-    setSelectedTypes(prev => 
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
+    setSelectedTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   };
 
   const createClusterIcon = (count: number) => {
     return new DivIcon({
       html: `<div class="cluster-marker">${count}</div>`,
-      className: 'custom-cluster-icon',
+      className: "custom-cluster-icon",
       iconSize: [40, 40],
     });
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'national': return 'bg-amber-500';
-      case 'state': return 'bg-primary';
-      case 'private': return 'bg-purple-500';
-      case 'international': return 'bg-emerald-500';
-      default: return 'bg-muted';
+      case "national":
+        return "bg-amber-500";
+      case "state":
+        return "bg-primary";
+      case "private":
+        return "bg-purple-500";
+      case "international":
+        return "bg-emerald-500";
+      default:
+        return "bg-muted";
     }
   };
 
@@ -107,12 +125,9 @@ export default function Map() {
       <div>
         <h4 className="font-medium mb-3">Тип ВУЗа</h4>
         <div className="space-y-2">
-          {universityTypes.map(type => (
+          {universityTypes.map((type) => (
             <label key={type.value} className="flex items-center gap-2 cursor-pointer">
-              <Checkbox 
-                checked={selectedTypes.includes(type.value)}
-                onCheckedChange={() => toggleType(type.value)}
-              />
+              <Checkbox checked={selectedTypes.includes(type.value)} onCheckedChange={() => toggleType(type.value)} />
               <span className="text-sm">{type.label}</span>
             </label>
           ))}
@@ -127,8 +142,10 @@ export default function Map() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все города</SelectItem>
-            {regions.map(region => (
-              <SelectItem key={region} value={region}>{region}</SelectItem>
+            {regions.map((region) => (
+              <SelectItem key={region} value={region}>
+                {region}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -226,23 +243,15 @@ export default function Map() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <MapContainer
-              center={mapCenter}
-              zoom={5}
-              style={{ height: '100%', width: '100%' }}
-              className="z-0"
-            >
+            <MapContainer center={mapCenter} zoom={5} style={{ height: "100%", width: "100%" }} className="z-0">
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <MapController center={mapCenter} />
-              
+
               {filteredUniversities.map((uni) => (
-                <Marker
-                  key={uni.id}
-                  position={[Number(uni.latitude), Number(uni.longitude)]}
-                >
+                <Marker key={uni.id} position={[Number(uni.latitude), Number(uni.longitude)]}>
                   <Popup>
                     <Card className="border-0 shadow-none">
                       <CardHeader className="pb-2">
@@ -262,7 +271,7 @@ export default function Map() {
                       <CardContent className="pt-0">
                         <div className="flex items-center gap-2 mb-3">
                           <Badge variant="secondary" className={`${getTypeColor(uni.type)} text-white`}>
-                            {universityTypes.find(t => t.value === uni.type)?.label}
+                            {universityTypes.find((t) => t.value === uni.type)?.label}
                           </Badge>
                           {uni.has_grants && <Badge variant="outline">Гранты</Badge>}
                         </div>
