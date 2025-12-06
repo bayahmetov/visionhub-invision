@@ -15,15 +15,15 @@ import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
+//import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // @ts-ignore
 delete Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({
-  // iconUrl: markerIcon,
-  // iconRetinaUrl: markerIcon2x,
-  // shadowUrl: markerShadow,
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
 });
 
 const universityTypes = [
