@@ -23,7 +23,7 @@ delete Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({
   // iconUrl: markerIcon,
   // iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
+  // shadowUrl: markerShadow,
 });
 
 const universityTypes = [
