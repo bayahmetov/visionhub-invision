@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Users, GraduationCap, Building2, Filter } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import "leaflet/dist/leaflet.css";
+//import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-//import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // @ts-ignore
