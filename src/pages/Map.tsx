@@ -196,6 +196,9 @@ export default function Map() {
           margin: 0;
           min-width: 250px;
         }
+        .leaflet-attribution-flag {
+          display: none !important;
+        }
       `}</style>
 
       {/* Header */}
